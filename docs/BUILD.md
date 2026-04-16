@@ -24,8 +24,8 @@ Eye:Witness is a three-layer system:
 | Phase | Owner | Builds |
 |---|---|---|
 | Phase 1 | Dev A | `PhotoRegistry.sol` + registration UI + provenance page + photographer dashboard |
-| Phase 2 | Dev B | Full detection agent — crawler, pHash, registry query, verification, classifier |
-| Phase 3 | Dev A | `LicenseEngine.sol` + `EscrowVault.sol` + agent payment execution + publisher/agency UI |
+| Phase 2 | Dev A | Full detection agent — crawler, pHash, registry query, verification, classifier |
+| Phase 3 | Dev B | `LicenseEngine.sol` + `EscrowVault.sol` + agent payment execution + publisher/agency UI |
 | Phase 4 | Dev B | `DisputeRegistry.sol` + DMCA automation + event listener + dispute dashboard |
 | Phase 5 | Dev A | Security audit + mainnet deploy + agent scaling + reliability |
 
@@ -251,7 +251,7 @@ Add `.env` to `.gitignore` before the first commit. Each dev copies `.env.exampl
 
 **Owner: Dev A**
 
-Dev B is not working during this phase. Dev A merges to `main` when the done checklist is complete, then Dev B picks up Phase 2.
+Dev B is not working during this phase. Dev A merges to `main` when the done checklist is complete, then continues directly into Phase 2.
 
 ---
 
@@ -355,9 +355,9 @@ Commit this first, before anything else.
 
 ## Phase 2 — Detection Agent
 
-**Owner: Dev B**
+**Owner: Dev A**
 
-Dev A is not working during this phase. Dev B pulls `main` (which has the deployed `PhotoRegistry` and `shared/encoding.ts` from Phase 1), builds the entire agent, merges to `main` when done.
+Dev B is not working during this phase. Dev A pulls from Phase 1's `main` (deployed `PhotoRegistry` + `shared/encoding.ts`), builds the entire agent, merges to `main` when done. Dev B picks up Phase 3 from there.
 
 ---
 
@@ -482,9 +482,9 @@ Dev A is not working during this phase. Dev B pulls `main` (which has the deploy
 
 ## Phase 3 — Payment Layer
 
-**Owner: Dev A**
+**Owner: Dev B**
 
-Dev B is not working during this phase. Dev A pulls `main` (which has the running agent from Phase 2), adds the payment contracts, wires them into the agent loop, and builds the publisher/agency UI.
+Dev A is not working during this phase. Dev B pulls `main` (which has the running agent from Phase 2), adds the payment contracts, wires them into the agent loop, and builds the publisher/agency UI. Dev B continues directly into Phase 4.
 
 ---
 
@@ -590,7 +590,7 @@ Wire up the detection count and payments received columns in `/dashboard/photogr
 
 **Owner: Dev B**
 
-Dev A is not working during this phase. Dev B pulls `main` (which has the full payment layer from Phase 3) and builds the dispute system end-to-end.
+Dev A is not working during this phase. Dev B continues from Phase 3, pulls the updated `main`, and builds the dispute system end-to-end. Dev B merges to `main` when done, then Dev A picks up Phase 5.
 
 ---
 
