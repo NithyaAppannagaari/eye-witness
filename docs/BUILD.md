@@ -342,14 +342,15 @@ Commit this first, before anything else.
 
 ### Phase 1 — Done Checklist
 
-- [ ] `npx hardhat test` passes
-- [ ] `PhotoRegistry` deployed on Base Sepolia, address in `.env`
-- [ ] ABI exported to `frontend/src/abi/PhotoRegistry.json`
-- [ ] `shared/encoding.ts` committed
-- [ ] Real wallet can register a photo end-to-end, tx on Basescan
-- [ ] Provenance page renders all fields correctly
-- [ ] Photographer dashboard shows registered photos for connected wallet
-- [ ] Merged to `main` — Dev B picks up Phase 2
+- [x] `npx hardhat test` passes (9/9)
+- [ ] `PhotoRegistry` deployed on Base Sepolia, address in `.env` — blocked on RPC URL (partner filling in)
+- [x] ABI exported to `frontend/src/abi/PhotoRegistry.json` (stub in place; deploy script replaces it automatically)
+- [x] `shared/encoding.ts` committed
+- [ ] Real wallet can register a photo end-to-end, tx on Basescan — blocked on deployment above
+- [x] Provenance page renders all fields correctly
+- [x] Photographer dashboard shows registered photos for connected wallet
+- [x] Frontend builds cleanly (`next build` passes)
+- [ ] Merged to `main` — pending deployment step
 
 ---
 

@@ -1,1 +1,22 @@
+# Environment
 .env
+.env.local
+.env.*.local
+.env.production
+
+# Dependencies
+node_modules/
+
+# Hardhat
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+contracts/dist/
+
+# Next.js
+frontend/.next/
+frontend/out/
+
+# Agent
+agent/agent.db
+agent/dist/

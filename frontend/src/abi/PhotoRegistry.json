@@ -1,0 +1,248 @@
+{
+  "address": "0x79d8A8c826DA75422cf6805345283Fec7FA2e7d2",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "photoHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "PhotoAlreadyRegistered",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "photoHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "PhotoNotFound",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "photoHash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "owner",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "PhotoRegistered",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "photoHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "url",
+          "type": "string"
+        }
+      ],
+      "name": "checkLicense",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "photoHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getLicenseRules",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "editorialPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "commercialPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "aiTrainingPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "blockAiTraining",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct PhotoRegistry.LicenseRules",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "photoHash",
+          "type": "bytes32"
+        }
+      ],
+      "name": "getPhoto",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "bytes32",
+              "name": "metadataHash",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "address",
+              "name": "owner",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "timestamp",
+              "type": "uint256"
+            },
+            {
+              "components": [
+                {
+                  "internalType": "uint256",
+                  "name": "editorialPrice",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "commercialPrice",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "aiTrainingPrice",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "bool",
+                  "name": "blockAiTraining",
+                  "type": "bool"
+                }
+              ],
+              "internalType": "struct PhotoRegistry.LicenseRules",
+              "name": "licenseRules",
+              "type": "tuple"
+            },
+            {
+              "internalType": "bool",
+              "name": "exists",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct PhotoRegistry.Photo",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "photoHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "url",
+          "type": "string"
+        }
+      ],
+      "name": "recordLicense",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "photoHash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "metadataHash",
+          "type": "bytes32"
+        },
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "editorialPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "commercialPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "aiTrainingPrice",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "blockAiTraining",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct PhotoRegistry.LicenseRules",
+          "name": "rules",
+          "type": "tuple"
+        }
+      ],
+      "name": "registerPhoto",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}
