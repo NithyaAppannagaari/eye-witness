@@ -147,6 +147,14 @@ pip3 install slither-analyzer
 brew install exiftool
 ```
 
+**Ollama** (Phase 2, local LLM classifier — free, no API key needed):
+```bash
+brew install ollama
+ollama pull llama3.2   # ~2GB, one-time download
+ollama serve           # keep running while the agent is active
+```
+Confirm with `ollama list` — you should see `llama3.2` listed. To use a different model, set `OLLAMA_MODEL=<name>` in `.env`.
+
 ---
 
 ### 2. Wallet Setup
@@ -221,7 +229,7 @@ NEXT_PUBLIC_DISPUTE_REGISTRY_ADDRESS=
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=
 DEPLOYER_PRIVATE_KEY=
 AGENT_PRIVATE_KEY=
-OPENAI_API_KEY=
+OLLAMA_MODEL=llama3.2
 SENDGRID_API_KEY=
 REDIS_URL=
 PLATFORM_TREASURY_ADDRESS=
