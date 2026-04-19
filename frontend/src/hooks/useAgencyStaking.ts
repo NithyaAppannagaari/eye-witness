@@ -15,8 +15,8 @@ export function useAgencyStaking() {
   const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}` | undefined;
   const vaultAddress = process.env.NEXT_PUBLIC_ESCROW_VAULT_ADDRESS as `0x${string}` | undefined;
 
-  const { writeContract: writeApprove, data: approveTx, isPending: isApprovePending, error: approveError } = useWriteContract();
-  const { writeContract: writeStake, data: stakeTx, isPending: isStakePending, error: stakeError } = useWriteContract();
+  const { mutate: writeApprove, data: approveTx, isPending: isApprovePending, error: approveError } = useWriteContract();
+  const { mutate: writeStake, data: stakeTx, isPending: isStakePending, error: stakeError } = useWriteContract();
 
   const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({
     hash: approveTx,

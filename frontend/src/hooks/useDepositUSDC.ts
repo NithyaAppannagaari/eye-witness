@@ -15,8 +15,8 @@ export function useDepositUSDC() {
   const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS as `0x${string}` | undefined;
   const vaultAddress = process.env.NEXT_PUBLIC_ESCROW_VAULT_ADDRESS as `0x${string}` | undefined;
 
-  const { writeContract: writeApprove, data: approveTx, isPending: isApprovePending, error: approveError } = useWriteContract();
-  const { writeContract: writeDeposit, data: depositTx, isPending: isDepositPending, error: depositError } = useWriteContract();
+  const { mutate: writeApprove, data: approveTx, isPending: isApprovePending, error: approveError } = useWriteContract();
+  const { mutate: writeDeposit, data: depositTx, isPending: isDepositPending, error: depositError } = useWriteContract();
 
   const { isSuccess: approveConfirmed } = useWaitForTransactionReceipt({
     hash: approveTx,

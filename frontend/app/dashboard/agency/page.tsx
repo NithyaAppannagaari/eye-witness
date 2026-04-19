@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
-import { useAccount, useReadContract, useWatchContractEvent } from "wagmi";
+import { useConnection, useReadContract, useWatchContractEvent } from "wagmi";
 import { formatUnits } from "viem";
 import { useAgencyStaking } from "@/hooks/useAgencyStaking";
 import EscrowVaultABI from "@/abi/EscrowVault.json";
@@ -23,7 +23,7 @@ interface LicenseEarning {
 }
 
 export default function AgencyDashboard() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
   const [stakeAmount, setStakeAmount] = useState("");
   const [portfolio, setPortfolio] = useState<string[]>([]);
   const [newPhotographer, setNewPhotographer] = useState("");

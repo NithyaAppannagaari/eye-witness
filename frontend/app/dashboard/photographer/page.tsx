@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
-import { useAccount, useWatchContractEvent } from "wagmi";
+import { useConnection, useWatchContractEvent } from "wagmi";
 import { useState, useEffect } from "react";
 import { formatUnits } from "viem";
 import PhotoRegistryABI from "@/abi/PhotoRegistry.json";
@@ -30,7 +30,7 @@ interface Detection {
 }
 
 export default function PhotographerDashboard() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [usdcEarned, setUsdcEarned] = useState(0n);
   const [detections, setDetections] = useState<Detection[]>([]);

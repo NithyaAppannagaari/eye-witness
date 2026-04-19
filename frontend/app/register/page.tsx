@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ConnectButton } from "@/components/ConnectButton";
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
 import { PhotoUpload, PhotoData } from "@/components/PhotoUpload";
 import { LicenseRulesForm } from "@/components/LicenseRulesForm";
 import { LicenseRules, useRegisterPhoto } from "@/hooks/useRegisterPhoto";
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
   const { register, isPending, isConfirming, isSuccess, txHash, error } = useRegisterPhoto();
 
   const [photoData, setPhotoData] = useState<PhotoData | null>(null);

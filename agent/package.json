@@ -7,6 +7,7 @@
     "dev": "ts-node src/index.ts"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "better-sqlite3": "^9.6.0",
     "cors": "^2.8.6",
     "dotenv": "^16.4.5",
@@ -15,7 +16,8 @@
     "express": "^5.2.1",
     "ollama": "^0.5.0",
     "puppeteer": "^22.15.0",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "whois": "^2.16.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.11",

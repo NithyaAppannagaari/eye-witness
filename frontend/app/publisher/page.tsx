@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
-import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent } from "wagmi";
+import { useConnection, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent } from "wagmi";
 import { formatUnits, parseUnits } from "viem";
 import { useDepositUSDC } from "@/hooks/useDepositUSDC";
 import EscrowVaultABI from "@/abi/EscrowVault.json";
@@ -24,7 +24,7 @@ interface LicenseEvent {
 }
 
 export default function PublisherPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useConnection();
   const [depositAmount, setDepositAmount] = useState("");
   const [domain, setDomain] = useState("");
   const [licenses, setLicenses] = useState<LicenseEvent[]>([]);
@@ -50,7 +50,7 @@ export default function PublisherPage() {
   });
 
   // Claim domain
-  const { writeContract: claimDomain, isPending: isClaimPending, data: claimTx } = useWriteContract();
+  const { mutate: claimDomain, isPending: isClaimPending, data: claimTx } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimTx });
 
   // Watch LicenseMinted events — collect ones for this publisher

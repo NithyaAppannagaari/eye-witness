@@ -14,7 +14,7 @@ export interface LicenseRules {
 export function useRegisterPhoto() {
   const contractAddress = process.env.NEXT_PUBLIC_PHOTO_REGISTRY_ADDRESS as `0x${string}` | undefined;
 
-  const { writeContract, data: txHash, isPending, error } = useWriteContract();
+  const { mutate: writeContract, data: txHash, isPending, error } = useWriteContract();
 
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash: txHash,
