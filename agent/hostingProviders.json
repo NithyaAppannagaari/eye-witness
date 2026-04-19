@@ -1,0 +1,17 @@
+[
+  { "domain": "amazonaws.com",   "email": "dmca@amazonaws.com" },
+  { "domain": "cloudflare.com",  "email": "abuse@cloudflare.com" },
+  { "domain": "fastly.com",      "email": "abuse@fastly.com" },
+  { "domain": "akamaihd.net",    "email": "dmca@akamai.com" },
+  { "domain": "wordpress.com",   "email": "dmca@automattic.com" },
+  { "domain": "squarespace.com", "email": "dmca@squarespace.com" },
+  { "domain": "wix.com",         "email": "abuse@wix.com" },
+  { "domain": "shopify.com",     "email": "legal@shopify.com" },
+  { "domain": "medium.com",      "email": "dmca@medium.com" },
+  { "domain": "tumblr.com",      "email": "dmca@tumblr.com" },
+  { "domain": "blogger.com",     "email": "dmca-agent@google.com" },
+  { "domain": "github.com",      "email": "dmca@github.com" },
+  { "domain": "imgur.com",       "email": "dmca@imgur.com" },
+  { "domain": "pinterest.com",   "email": "dmca@pinterest.com" },
+  { "domain": "godaddy.com",     "email": "abuse@godaddy.com" }
+]

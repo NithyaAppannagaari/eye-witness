@@ -111,6 +111,11 @@ export async function crawlAndInsert(targets: string[]): Promise<void> {
             useType: null,
             licensePrice: null,
             disputeId: null,
+            publisherAddress: null,
+            txHash: null,
+            dmcaSentAt: null,
+            resolvedAt: null,
+            dmcaEmail: null,
             status: 'pending',
           })
         } catch (err) {

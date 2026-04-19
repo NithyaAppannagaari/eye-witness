@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import path from 'path'
-import { DetectionRow, DetectionStatus, RegisteredPhoto } from './types'
+import { DetectionRow, RegisteredPhoto } from './types'
 
 const DB_PATH = path.resolve(__dirname, '../../agent.db')
 
@@ -35,7 +35,10 @@ function initSchema() {
       publisherAddress TEXT,
       txHash TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
-      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      dmcaSentAt TEXT,
+      resolvedAt TEXT,
+      dmcaEmail TEXT
     );
 
     CREATE TABLE IF NOT EXISTS registered_photos (
@@ -45,6 +48,11 @@ function initSchema() {
       pHash TEXT
     );
   `)
+
+  // Migrate existing tables — ALTER TABLE ignores "already exists" errors
+  for (const col of ['dmcaSentAt TEXT', 'resolvedAt TEXT', 'dmcaEmail TEXT']) {
+    try { getDb().exec(`ALTER TABLE detections ADD COLUMN ${col}`) } catch { /* already exists */ }
+  }
 }
 
 export function insertDetection(row: Omit<DetectionRow, 'id' | 'createdAt'>): number {
@@ -99,6 +107,18 @@ export function getVerifiedDetections(): DetectionRow[] {
 export function getClassifiedDetections(): DetectionRow[] {
   return getDb()
     .prepare("SELECT * FROM detections WHERE status = 'classified'")
+    .all() as DetectionRow[]
+}
+
+export function getAwaitingEnforcement(): DetectionRow[] {
+  return getDb()
+    .prepare("SELECT * FROM detections WHERE status = 'awaiting_enforcement'")
+    .all() as DetectionRow[]
+}
+
+export function getBlockedCategory(): DetectionRow[] {
+  return getDb()
+    .prepare("SELECT * FROM detections WHERE status = 'blocked_category'")
     .all() as DetectionRow[]
 }
 

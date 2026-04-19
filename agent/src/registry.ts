@@ -19,6 +19,7 @@ function getContract(): ethers.Contract {
   if (contract) return contract
 
   const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL
+  const fallbackUrl = process.env.FALLBACK_RPC_URL
   const contractAddress = process.env.NEXT_PUBLIC_PHOTO_REGISTRY_ADDRESS
 
   if (!rpcUrl || !contractAddress) {
@@ -27,7 +28,12 @@ function getContract(): ethers.Contract {
 
   const abiJson = JSON.parse(fs.readFileSync(ABI_PATH, 'utf-8'))
   const abi = abiJson.abi ?? abiJson
-  const provider = new ethers.JsonRpcProvider(rpcUrl)
+
+  const primary = new ethers.JsonRpcProvider(rpcUrl)
+  const provider = fallbackUrl
+    ? new ethers.FallbackProvider([primary, new ethers.JsonRpcProvider(fallbackUrl)])
+    : primary
+
   contract = new ethers.Contract(contractAddress, abi, provider)
   return contract
 }

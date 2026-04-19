@@ -29,11 +29,51 @@ interface Detection {
   txHash: string | null;
 }
 
+interface Dispute {
+  id: number;
+  pageUrl: string;
+  imageUrl: string;
+  matchedPhotoHash: string | null;
+  useType: string | null;
+  disputeId: number | null;
+  status: string;
+  dmcaSentAt: string | null;
+  resolvedAt: string | null;
+  dmcaEmail: string | null;
+  createdAt: string;
+}
+
+type Tab = "photos" | "disputes";
+
+function disputeStatusBadge(status: string) {
+  if (status === "resolved") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+        RESOLVED
+      </span>
+    );
+  }
+  if (status === "dmca_sent") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800">
+        DMCA SENT
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+      OPEN
+    </span>
+  );
+}
+
 export default function PhotographerDashboard() {
   const { address, isConnected } = useConnection();
+  const [tab, setTab] = useState<Tab>("photos");
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [usdcEarned, setUsdcEarned] = useState(0n);
   const [detections, setDetections] = useState<Detection[]>([]);
+  const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [detectionsByPhoto, setDetectionsByPhoto] = useState<Map<string, number>>(new Map());
 
   // Watch PhotoRegistered events
@@ -70,8 +110,6 @@ export default function PhotographerDashboard() {
       (logs as any[]).forEach((log) => {
         const photoId = (log.args?.photoId as string)?.toLowerCase();
         if (myHashes.has(photoId)) {
-          // Each LicenseMinted = one payment; sum up based on editorialPrice from license rules
-          // Approximate: 80% of the payment goes to photographer — track detections count instead
           setDetectionsByPhoto((prev) => {
             const updated = new Map(prev);
             updated.set(photoId, (updated.get(photoId) ?? 0) + 1);
@@ -94,11 +132,28 @@ export default function PhotographerDashboard() {
         const rows = await res.json() as Detection[];
         if (!cancelled) setDetections(rows);
 
-        // Sum USDC from paid detections
         const paid = rows.filter((r) => r.status === "paid" && r.licensePrice);
         const total = paid.reduce((acc, r) => acc + BigInt(r.licensePrice!), 0n);
-        // 80% of each payment goes to photographer
         if (!cancelled) setUsdcEarned((total * 8000n) / 10000n);
+      } catch {
+        // Agent API not running — silently skip
+      }
+    };
+    load();
+    const interval = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [address]);
+
+  // Fetch disputes from agent API (polls every 30s)
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`${AGENT_API}/api/disputes?wallet=${address.toLowerCase()}`);
+        if (!res.ok || cancelled) return;
+        const rows = await res.json() as Dispute[];
+        if (!cancelled) setDisputes(rows);
       } catch {
         // Agent API not running — silently skip
       }
@@ -112,6 +167,7 @@ export default function PhotographerDashboard() {
     setRegistrations([]);
     setUsdcEarned(0n);
     setDetections([]);
+    setDisputes([]);
     setDetectionsByPhoto(new Map());
   }, [address]);
 
@@ -148,54 +204,124 @@ export default function PhotographerDashboard() {
               <StatCard label="Detections" value={totalDetections} />
             </div>
 
-            {registrations.length === 0 ? (
-              <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
-                <p className="text-gray-500 text-sm">No photos registered yet, or events occurred before this session.</p>
-                <p className="text-gray-400 text-xs mt-1">Register a photo and it will appear here in real time.</p>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo Hash</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registered</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detections</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {registrations.map((r) => (
-                      <tr key={r.photoHash} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 font-mono text-xs text-gray-600 truncate max-w-xs">
-                          {r.photoHash.slice(0, 18)}…
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">
-                          {new Date(Number(r.timestamp) * 1000).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 text-gray-700 text-xs">
-                          {detectionsByPhoto.get(r.photoHash.toLowerCase()) ?? 0}
-                        </td>
-                        <td className="px-4 py-3">
-                          <Link href={`/photo/${r.photoHash}`} className="text-blue-600 hover:underline text-xs">
-                            View provenance →
-                          </Link>
-                          {r.txHash && (
+            {/* Tab switcher */}
+            <div className="flex gap-1 mb-4 border-b border-gray-200">
+              <TabButton active={tab === "photos"} onClick={() => setTab("photos")}>
+                Registered Photos
+              </TabButton>
+              <TabButton active={tab === "disputes"} onClick={() => setTab("disputes")}>
+                Disputes
+                {disputes.length > 0 && (
+                  <span className="ml-2 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-700">
+                    {disputes.length}
+                  </span>
+                )}
+              </TabButton>
+            </div>
+
+            {tab === "photos" && (
+              registrations.length === 0 ? (
+                <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
+                  <p className="text-gray-500 text-sm">No photos registered yet, or events occurred before this session.</p>
+                  <p className="text-gray-400 text-xs mt-1">Register a photo and it will appear here in real time.</p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo Hash</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registered</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detections</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {registrations.map((r) => (
+                        <tr key={r.photoHash} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-mono text-xs text-gray-600 truncate max-w-xs">
+                            {r.photoHash.slice(0, 18)}…
+                          </td>
+                          <td className="px-4 py-3 text-gray-700">
+                            {new Date(Number(r.timestamp) * 1000).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 text-gray-700 text-xs">
+                            {detectionsByPhoto.get(r.photoHash.toLowerCase()) ?? 0}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Link href={`/photo/${r.photoHash}`} className="text-blue-600 hover:underline text-xs">
+                              View provenance →
+                            </Link>
+                            {r.txHash && (
+                              <a
+                                href={`https://sepolia.etherscan.io/tx/${r.txHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ml-3 text-gray-400 hover:text-gray-600 text-xs"
+                              >
+                                Etherscan ↗
+                              </a>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            )}
+
+            {tab === "disputes" && (
+              disputes.length === 0 ? (
+                <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
+                  <p className="text-gray-500 text-sm">No enforcement actions yet.</p>
+                  <p className="text-gray-400 text-xs mt-1">Disputes appear here when the agent detects unlicensed usage that can&apos;t be auto-paid.</p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Infringing URL</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Use Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dispute #</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {disputes.map((d) => (
+                        <tr key={d.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-xs text-gray-700 max-w-xs truncate">
                             <a
-                              href={`https://sepolia.etherscan.io/tx/${r.txHash}`}
+                              href={d.pageUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="ml-3 text-gray-400 hover:text-gray-600 text-xs"
+                              className="text-blue-600 hover:underline"
                             >
-                              Etherscan ↗
+                              {d.pageUrl}
                             </a>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600 capitalize">
+                            {d.useType ?? "—"}
+                          </td>
+                          <td className="px-4 py-3 text-xs font-mono text-gray-600">
+                            {d.disputeId != null ? `#${d.disputeId}` : "—"}
+                          </td>
+                          <td className="px-4 py-3">
+                            {disputeStatusBadge(d.status)}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-500">
+                            {d.dmcaSentAt
+                              ? new Date(d.dmcaSentAt).toLocaleDateString()
+                              : new Date(d.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
             )}
           </>
         )}
@@ -210,5 +336,20 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
       <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
       <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
     </div>
+  );
+}
+
+function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+        active
+          ? "border-blue-600 text-blue-600"
+          : "border-transparent text-gray-500 hover:text-gray-700"
+      }`}
+    >
+      {children}
+    </button>
   );
 }

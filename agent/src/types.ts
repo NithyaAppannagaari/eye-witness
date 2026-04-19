@@ -9,6 +9,8 @@ export type DetectionStatus =
   | 'blocked_category'
   | 'paid'
   | 'awaiting_enforcement'
+  | 'dmca_sent'
+  | 'resolved'
 
 export interface DetectionRow {
   id: number
@@ -24,6 +26,9 @@ export interface DetectionRow {
   txHash: string | null
   status: DetectionStatus
   createdAt: string
+  dmcaSentAt: string | null
+  resolvedAt: string | null
+  dmcaEmail: string | null
 }
 
 export interface RegisteredPhoto {

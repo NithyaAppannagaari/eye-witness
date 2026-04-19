@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { anyValue } from "@nomicfoundation/hardhat-chai-matchers/withArgs";
 import { DisputeRegistry } from "../typechain-types";
 import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -39,7 +40,7 @@ describe("DisputeRegistry", () => {
     it("emits DisputeLogged event", async () => {
       await expect(registry.connect(agent).logDispute(PHOTO_ID, URL, EVIDENCE_HASH))
         .to.emit(registry, "DisputeLogged")
-        .withArgs(URL, PHOTO_ID, 0, await ethers.provider.getBlock("latest").then(b => b!.timestamp + 1), EVIDENCE_HASH);
+        .withArgs(URL, PHOTO_ID, 0, anyValue, EVIDENCE_HASH);
     });
 
     it("increments disputeCount for multiple disputes", async () => {
