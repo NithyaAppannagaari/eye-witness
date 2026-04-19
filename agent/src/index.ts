@@ -19,8 +19,11 @@ import {
   getPendingDetections,
   getMatchedDetections,
   getVerifiedDetections,
+  getClassifiedDetections,
   updateDetection,
 } from './db'
+import { getPublisherForDomain, getPublisherBalance, executePayment } from './payment'
+import { startApiServer } from './api'
 
 const TARGETS_PATH = path.resolve(__dirname, '../targets.json')
 const LOOP_INTERVAL_MS = 60_000
@@ -162,9 +165,57 @@ async function processVerified(): Promise<void> {
   }
 }
 
+async function processClassified(): Promise<void> {
+  const rows = getClassifiedDetections()
+  if (rows.length === 0) return
+  console.log(`[index] Processing ${rows.length} classified detections for payment`)
+
+  for (const row of rows) {
+    if (!row.matchedPhotoHash || !row.ownerWallet || !row.licensePrice || !row.useType) {
+      updateDetection(row.id, { status: 'awaiting_enforcement' })
+      continue
+    }
+
+    try {
+      const domain = new URL(row.pageUrl).hostname
+      const publisherAddress = await getPublisherForDomain(domain)
+
+      if (!publisherAddress) {
+        console.log(`[payment] No publisher found for domain ${domain}`)
+        updateDetection(row.id, { status: 'awaiting_enforcement' })
+        continue
+      }
+
+      const price = BigInt(row.licensePrice)
+      const balance = await getPublisherBalance(publisherAddress)
+
+      if (balance < price) {
+        console.log(`[payment] Publisher balance ${balance} < price ${price} for ${domain}`)
+        updateDetection(row.id, { status: 'awaiting_enforcement' })
+        continue
+      }
+
+      const txHash = await executePayment(
+        publisherAddress,
+        row.matchedPhotoHash,
+        price,
+        row.pageUrl,
+        row.ownerWallet,
+        row.useType
+      )
+      console.log(`[payment] Paid — tx: ${txHash}`)
+      updateDetection(row.id, { status: 'paid', txHash, publisherAddress })
+    } catch (err) {
+      console.warn(`[index] Payment failed for detection ${row.id}:`, err)
+    }
+  }
+}
+
 async function runLoop(): Promise<void> {
   console.log('[index] Starting detection loop...')
   const targets = loadTargets()
+
+  startApiServer()
 
   // Sync registered photos from chain on startup
   try {
@@ -179,6 +230,7 @@ async function runLoop(): Promise<void> {
     await processPending()
     await processMatched()
     await processVerified()
+    await processClassified()
     console.log('[index] Tick complete')
   }
 

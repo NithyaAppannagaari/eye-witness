@@ -32,6 +32,8 @@ function initSchema() {
       useType TEXT,
       licensePrice TEXT,
       disputeId INTEGER,
+      publisherAddress TEXT,
+      txHash TEXT,
       status TEXT NOT NULL DEFAULT 'pending',
       createdAt TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -91,6 +93,12 @@ export function getMatchedDetections(): DetectionRow[] {
 export function getVerifiedDetections(): DetectionRow[] {
   return getDb()
     .prepare("SELECT * FROM detections WHERE status = 'verified'")
+    .all() as DetectionRow[]
+}
+
+export function getClassifiedDetections(): DetectionRow[] {
+  return getDb()
+    .prepare("SELECT * FROM detections WHERE status = 'classified'")
     .all() as DetectionRow[]
 }
 

@@ -7,6 +7,8 @@ export type DetectionStatus =
   | 'unverifiable'
   | 'classified'
   | 'blocked_category'
+  | 'paid'
+  | 'awaiting_enforcement'
 
 export interface DetectionRow {
   id: number
@@ -18,6 +20,8 @@ export interface DetectionRow {
   useType: string | null
   licensePrice: bigint | null
   disputeId: number | null
+  publisherAddress: string | null
+  txHash: string | null
   status: DetectionStatus
   createdAt: string
 }

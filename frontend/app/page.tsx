@@ -8,7 +8,7 @@ export default function Home() {
         <p className="text-gray-500">
           Verified Photography. Automatic Enforcement. On-Chain Payments.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4 flex-wrap">
           <Link
             href="/register"
             className="rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white hover:bg-blue-700 transition-colors"
@@ -20,6 +20,18 @@ export default function Home() {
             className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
             Photographer Dashboard
+          </Link>
+          <Link
+            href="/publisher"
+            className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Publisher Escrow
+          </Link>
+          <Link
+            href="/dashboard/agency"
+            className="rounded-lg border border-gray-300 bg-white px-5 py-2.5 font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            Agency Dashboard
           </Link>
         </div>
       </div>

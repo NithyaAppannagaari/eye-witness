@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
-import { useAccount, useReadContracts } from "wagmi";
-import { useWatchContractEvent } from "wagmi";
+import { useAccount, useWatchContractEvent } from "wagmi";
 import { useState, useEffect } from "react";
 import { formatUnits } from "viem";
 import PhotoRegistryABI from "@/abi/PhotoRegistry.json";
+import LicenseEngineABI from "@/abi/LicenseEngine.json";
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_PHOTO_REGISTRY_ADDRESS as `0x${string}` | undefined;
+const LICENSE_ENGINE_ADDRESS = process.env.NEXT_PUBLIC_LICENSE_ENGINE_ADDRESS as `0x${string}` | undefined;
+const AGENT_API = "http://localhost:3001";
 
 interface Registration {
   photoHash: string;
@@ -17,11 +19,24 @@ interface Registration {
   txHash?: string;
 }
 
+interface Detection {
+  id: number;
+  pageUrl: string;
+  imageUrl: string;
+  status: string;
+  useType: string | null;
+  licensePrice: string | null;
+  txHash: string | null;
+}
+
 export default function PhotographerDashboard() {
   const { address, isConnected } = useAccount();
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [usdcEarned, setUsdcEarned] = useState(0n);
+  const [detections, setDetections] = useState<Detection[]>([]);
+  const [detectionsByPhoto, setDetectionsByPhoto] = useState<Map<string, number>>(new Map());
 
-  // Watch for PhotoRegistered events and filter by connected wallet
+  // Watch PhotoRegistered events
   useWatchContractEvent({
     address: CONTRACT_ADDRESS,
     abi: PhotoRegistryABI.abi,
@@ -36,20 +51,71 @@ export default function PhotographerDashboard() {
           timestamp: log.args.timestamp as bigint,
           txHash: (log.transactionHash as string) ?? undefined,
         }));
-
       setRegistrations((prev) => {
         const existing = new Set(prev.map((r) => r.photoHash));
-        const newOnes = relevant.filter((r) => !existing.has(r.photoHash));
-        return [...prev, ...newOnes];
+        return [...prev, ...relevant.filter((r) => !existing.has(r.photoHash))];
       });
     },
     enabled: !!CONTRACT_ADDRESS && isConnected,
   });
 
-  // Clear registrations when wallet changes
+  // Watch LicenseMinted events — accumulate USDC earned for this photographer's photos
+  useWatchContractEvent({
+    address: LICENSE_ENGINE_ADDRESS,
+    abi: LicenseEngineABI.abi,
+    eventName: "LicenseMinted",
+    onLogs(logs) {
+      const myHashes = new Set(registrations.map((r) => r.photoHash.toLowerCase()));
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (logs as any[]).forEach((log) => {
+        const photoId = (log.args?.photoId as string)?.toLowerCase();
+        if (myHashes.has(photoId)) {
+          // Each LicenseMinted = one payment; sum up based on editorialPrice from license rules
+          // Approximate: 80% of the payment goes to photographer — track detections count instead
+          setDetectionsByPhoto((prev) => {
+            const updated = new Map(prev);
+            updated.set(photoId, (updated.get(photoId) ?? 0) + 1);
+            return updated;
+          });
+        }
+      });
+    },
+    enabled: !!LICENSE_ENGINE_ADDRESS && isConnected && registrations.length > 0,
+  });
+
+  // Fetch detections from agent API
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await fetch(`${AGENT_API}/api/detections?wallet=${address.toLowerCase()}`);
+        if (!res.ok || cancelled) return;
+        const rows = await res.json() as Detection[];
+        if (!cancelled) setDetections(rows);
+
+        // Sum USDC from paid detections
+        const paid = rows.filter((r) => r.status === "paid" && r.licensePrice);
+        const total = paid.reduce((acc, r) => acc + BigInt(r.licensePrice!), 0n);
+        // 80% of each payment goes to photographer
+        if (!cancelled) setUsdcEarned((total * 8000n) / 10000n);
+      } catch {
+        // Agent API not running — silently skip
+      }
+    };
+    load();
+    const interval = setInterval(load, 30_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [address]);
+
   useEffect(() => {
     setRegistrations([]);
+    setUsdcEarned(0n);
+    setDetections([]);
+    setDetectionsByPhoto(new Map());
   }, [address]);
+
+  const totalDetections = detections.length;
 
   return (
     <main className="min-h-screen bg-gray-50">
@@ -76,22 +142,16 @@ export default function PhotographerDashboard() {
           </div>
         ) : (
           <>
-            {/* Stats bar */}
             <div className="grid grid-cols-3 gap-4 mb-8">
               <StatCard label="Photos Registered" value={registrations.length} />
-              <StatCard label="USDC Earned" value="— (Phase 3)" muted />
-              <StatCard label="Open Disputes" value="— (Phase 4)" muted />
+              <StatCard label="USDC Earned" value={`$${formatUnits(usdcEarned, 6)}`} />
+              <StatCard label="Detections" value={totalDetections} />
             </div>
 
-            {/* Registrations table */}
             {registrations.length === 0 ? (
               <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
-                <p className="text-gray-500 text-sm">
-                  No photos registered yet, or events occurred before this session.
-                </p>
-                <p className="text-gray-400 text-xs mt-1">
-                  Register a photo and it will appear here in real time.
-                </p>
+                <p className="text-gray-500 text-sm">No photos registered yet, or events occurred before this session.</p>
+                <p className="text-gray-400 text-xs mt-1">Register a photo and it will appear here in real time.</p>
               </div>
             ) : (
               <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
@@ -113,12 +173,11 @@ export default function PhotographerDashboard() {
                         <td className="px-4 py-3 text-gray-700">
                           {new Date(Number(r.timestamp) * 1000).toLocaleDateString()}
                         </td>
-                        <td className="px-4 py-3 text-gray-400 text-xs">— (Phase 2)</td>
+                        <td className="px-4 py-3 text-gray-700 text-xs">
+                          {detectionsByPhoto.get(r.photoHash.toLowerCase()) ?? 0}
+                        </td>
                         <td className="px-4 py-3">
-                          <Link
-                            href={`/photo/${r.photoHash}`}
-                            className="text-blue-600 hover:underline text-xs"
-                          >
+                          <Link href={`/photo/${r.photoHash}`} className="text-blue-600 hover:underline text-xs">
                             View provenance →
                           </Link>
                           {r.txHash && (
@@ -128,7 +187,7 @@ export default function PhotographerDashboard() {
                               rel="noopener noreferrer"
                               className="ml-3 text-gray-400 hover:text-gray-600 text-xs"
                             >
-                              Basescan ↗
+                              Etherscan ↗
                             </a>
                           )}
                         </td>
@@ -145,21 +204,11 @@ export default function PhotographerDashboard() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  muted,
-}: {
-  label: string;
-  value: string | number;
-  muted?: boolean;
-}) {
+function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-lg border border-gray-200 bg-white px-4 py-5">
       <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${muted ? "text-gray-300" : "text-gray-900"}`}>
-        {value}
-      </p>
+      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
     </div>
   );
 }
