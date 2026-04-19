@@ -6,9 +6,8 @@ import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || "";
-const SEPOLIA_RPC = process.env.NEXT_PUBLIC_BASE_RPC_URL || "";
-const MAINNET_RPC = process.env.MAINNET_RPC_URL || "";
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
+const BSC_TESTNET_RPC = process.env.NEXT_PUBLIC_BASE_RPC_URL || "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
+const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || "";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -20,27 +19,28 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {},
-    ...(SEPOLIA_RPC && DEPLOYER_PRIVATE_KEY
+    ...(DEPLOYER_PRIVATE_KEY
       ? {
-          sepolia: {
-            url: SEPOLIA_RPC,
+          bscTestnet: {
+            url: BSC_TESTNET_RPC,
             accounts: [DEPLOYER_PRIVATE_KEY],
-            chainId: 11155111,
-          },
-        }
-      : {}),
-    ...(MAINNET_RPC && DEPLOYER_PRIVATE_KEY
-      ? {
-          mainnet: {
-            url: MAINNET_RPC,
-            accounts: [DEPLOYER_PRIVATE_KEY],
-            chainId: 1,
+            chainId: 97,
           },
         }
       : {}),
   },
   etherscan: {
-    apiKey: ETHERSCAN_API_KEY,
+    apiKey: { bscTestnet: BSCSCAN_API_KEY },
+    customChains: [
+      {
+        network: "bscTestnet",
+        chainId: 97,
+        urls: {
+          apiURL: "https://api-testnet.bscscan.com/api",
+          browserURL: "https://testnet.bscscan.com",
+        },
+      },
+    ],
   },
   paths: {
     sources: "./contracts",

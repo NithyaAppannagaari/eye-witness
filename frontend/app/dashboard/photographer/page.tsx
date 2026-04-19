@@ -254,12 +254,12 @@ export default function PhotographerDashboard() {
                             </Link>
                             {r.txHash && (
                               <a
-                                href={`https://sepolia.etherscan.io/tx/${r.txHash}`}
+                                href={`https://testnet.bscscan.com/tx/${r.txHash}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="ml-3 text-gray-400 hover:text-gray-600 text-xs"
                               >
-                                Etherscan ↗
+                                BscScan ↗
                               </a>
                             )}
                           </td>

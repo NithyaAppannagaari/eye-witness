@@ -1,7 +1,7 @@
 "use client";
 
 import { useConnection, useConnect, useDisconnect, useChainId, useSwitchChain, useConnectors } from "wagmi";
-import { sepolia } from "wagmi/chains";
+import { bscTestnet } from "wagmi/chains";
 
 export function ConnectButton() {
   const { address, isConnected } = useConnection();
@@ -12,14 +12,14 @@ export function ConnectButton() {
   const connectors = useConnectors();
 
   if (isConnected && address) {
-    if (chainId !== sepolia.id) {
+    if (chainId !== bscTestnet.id) {
       return (
         <button
-          onClick={() => switchChain({ chainId: sepolia.id })}
+          onClick={() => switchChain({ chainId: bscTestnet.id })}
           disabled={isSwitching}
           className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-40 transition-colors"
         >
-          {isSwitching ? "Switching…" : "Switch to Sepolia"}
+          {isSwitching ? "Switching…" : "Switch to BNB Testnet"}
         </button>
       );
     }

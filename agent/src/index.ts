@@ -33,14 +33,13 @@ async function runLoop(): Promise<void> {
   startMonitor()
   startHealthServer()
 
-  try {
-    await syncRegisteredPhotos()
-  } catch (err) {
-    logger.error({ err }, '[index] Failed to sync registry')
-  }
-
   const tick = async () => {
     logger.info(`[index] Tick at ${new Date().toISOString()}`)
+    try {
+      await syncRegisteredPhotos()
+    } catch {
+      logger.warn('[index] Registry sync skipped (RPC limit — will retry next tick)')
+    }
     await crawlAndInsert(targets)
     await processPending()
     await processMatched()
@@ -51,6 +50,10 @@ async function runLoop(): Promise<void> {
   }
 
   await tick()
+  if (process.argv.includes('--once')) {
+    logger.info('[index] --once flag set, exiting after single tick')
+    process.exit(0)
+  }
   setInterval(tick, LOOP_INTERVAL_MS)
 }
 

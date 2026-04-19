@@ -211,7 +211,7 @@ export default function PublisherPage() {
                         </td>
                         <td className="px-4 py-3">
                           {l.txHash && (
-                            <a href={`https://sepolia.etherscan.io/tx/${l.txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                            <a href={`https://testnet.bscscan.com/tx/${l.txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
                               View ↗
                             </a>
                           )}

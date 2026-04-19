@@ -223,7 +223,7 @@ export default function AgencyDashboard() {
                         </td>
                         <td className="px-4 py-3">
                           {e.txHash && (
-                            <a href={`https://sepolia.etherscan.io/tx/${e.txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                            <a href={`https://testnet.bscscan.com/tx/${e.txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
                               View ↗
                             </a>
                           )}
