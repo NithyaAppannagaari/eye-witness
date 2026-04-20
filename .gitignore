@@ -17,6 +17,9 @@ contracts/dist/
 frontend/.next/
 frontend/out/
 
-# Agent
+# Agent (SQLite lives at repo root — see agent/src/db.ts)
+/agent.db
+/agent.db-shm
+/agent.db-wal
 agent/agent.db
 agent/dist/
