@@ -48,46 +48,53 @@ export default function ProvenancePage({
   const date = new Date(Number(p.timestamp) * 1000);
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4">
-        <Link href="/" className="font-bold text-lg tracking-tight">Eye:Witness</Link>
+    <main className="min-h-screen bg-[#0a0806]">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0a0806]/88 backdrop-blur-md px-6 py-4">
+        <Link href="/" className="font-bold text-lg tracking-tight text-[#f5f0eb]">
+          Eye<span className="text-orange-500">:</span>Witness
+        </Link>
       </nav>
 
       <div className="mx-auto max-w-2xl px-4 py-12 space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">Photo Provenance</h1>
+        <div>
+          <div className="inline-block text-[11px] font-semibold text-orange-400 tracking-widest uppercase bg-orange-500/[0.08] border border-orange-500/[0.18] rounded-full px-3 py-1 mb-3">
+            On-Chain Provenance
+          </div>
+          <h1 className="text-2xl font-bold text-[#f5f0eb] tracking-tight">Photo Provenance</h1>
+        </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-6 space-y-4">
+        <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6 space-y-4">
           <Row label="Owner" value={
-            <span className="font-mono text-sm break-all">{p.owner}</span>
+            <span className="font-mono text-sm break-all text-[#f5f0eb]">{p.owner}</span>
           } />
           <Row label="Registered" value={
-            <span>{date.toUTCString()}</span>
+            <span className="text-[#f5f0eb]">{date.toUTCString()}</span>
           } />
           <Row label="Metadata hash" value={
-            <span className="font-mono text-xs break-all text-gray-600">{p.metadataHash}</span>
+            <span className="font-mono text-xs break-all text-[#a89f96]">{p.metadataHash}</span>
           } />
           <Row label="Photo hash" value={
-            <span className="font-mono text-xs break-all text-gray-600">{photoHash}</span>
+            <span className="font-mono text-xs break-all text-[#a89f96]">{photoHash}</span>
           } />
         </div>
 
-        <div className="rounded-lg border border-gray-200 bg-white p-6 space-y-3">
-          <h2 className="font-semibold text-gray-900">License Rules</h2>
-          <Row label="Editorial" value={`${formatUnits(p.licenseRules.editorialPrice, 6)} USDC`} />
-          <Row label="Commercial" value={`${formatUnits(p.licenseRules.commercialPrice, 6)} USDC`} />
+        <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6 space-y-4">
+          <h2 className="font-semibold text-[#f5f0eb]">License Rules</h2>
+          <Row label="Editorial" value={<span className="text-[#f5f0eb]">{formatUnits(p.licenseRules.editorialPrice, 6)} USDC</span>} />
+          <Row label="Commercial" value={<span className="text-[#f5f0eb]">{formatUnits(p.licenseRules.commercialPrice, 6)} USDC</span>} />
           <Row
             label="AI Training"
             value={
               p.licenseRules.blockAiTraining
-                ? <span className="text-red-600 font-medium">Blocked</span>
-                : `${formatUnits(p.licenseRules.aiTrainingPrice, 6)} USDC`
+                ? <span className="text-red-400 font-medium">Blocked</span>
+                : <span className="text-[#f5f0eb]">{formatUnits(p.licenseRules.aiTrainingPrice, 6)} USDC</span>
             }
           />
         </div>
 
-        <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+        <div className="rounded-xl border border-orange-500/[0.18] bg-orange-500/[0.05] p-4 text-sm text-orange-300">
           Want to license this photo?{" "}
-          <Link href="/publisher" className="underline font-medium">
+          <Link href="/publisher" className="underline font-medium text-orange-400 hover:text-orange-300 transition-colors">
             Deposit escrow to license automatically →
           </Link>
         </div>
@@ -98,27 +105,29 @@ export default function ProvenancePage({
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4">
-      <span className="w-32 shrink-0 text-sm text-gray-500">{label}</span>
-      <span className="text-sm text-gray-900">{value}</span>
+    <div className="flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-4 border-b border-white/[0.05] pb-3 last:border-0 last:pb-0">
+      <span className="w-32 shrink-0 text-sm text-[#6b6259]">{label}</span>
+      <span className="text-sm">{value}</span>
     </div>
   );
 }
 
 function LoadingState() {
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <p className="text-gray-500">Loading provenance record…</p>
+    <main className="min-h-screen bg-[#0a0806] flex items-center justify-center">
+      <p className="text-[#6b6259]">Loading provenance record…</p>
     </main>
   );
 }
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center space-y-2">
-        <p className="text-gray-700">{message}</p>
-        <Link href="/register" className="text-blue-600 underline text-sm">Register a photo →</Link>
+    <main className="min-h-screen bg-[#0a0806] flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <p className="text-[#a89f96]">{message}</p>
+        <Link href="/register" className="text-orange-400 hover:text-orange-300 underline text-sm transition-colors">
+          Register a photo →
+        </Link>
       </div>
     </main>
   );

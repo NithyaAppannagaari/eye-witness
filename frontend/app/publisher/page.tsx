@@ -4,11 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
 import { useConnection, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent } from "wagmi";
-import { formatUnits, parseUnits } from "viem";
+import { formatUnits } from "viem";
 import { useDepositUSDC } from "@/hooks/useDepositUSDC";
 import EscrowVaultABI from "@/abi/EscrowVault.json";
 import LicenseEngineABI from "@/abi/LicenseEngine.json";
 import MockUSDCABI from "@/abi/MockUSDC.json";
+import { parseUnits } from "viem";
 
 const VAULT_ADDRESS = process.env.NEXT_PUBLIC_ESCROW_VAULT_ADDRESS as `0x${string}` | undefined;
 const LICENSE_ENGINE_ADDRESS = process.env.NEXT_PUBLIC_LICENSE_ENGINE_ADDRESS as `0x${string}` | undefined;
@@ -31,7 +32,6 @@ export default function PublisherPage() {
 
   const { deposit, step: depositStep, isPending: isDepositing, error: depositError, reset: resetDeposit } = useDepositUSDC();
 
-  // Read escrow balance — poll every 15s
   const { data: escrowBalance, refetch: refetchBalance } = useReadContract({
     address: VAULT_ADDRESS,
     abi: EscrowVaultABI.abi,
@@ -40,7 +40,6 @@ export default function PublisherPage() {
     query: { enabled: !!VAULT_ADDRESS && !!address, refetchInterval: 15_000 },
   });
 
-  // Read USDC wallet balance
   const { data: walletUsdcBalance } = useReadContract({
     address: USDC_ADDRESS,
     abi: MockUSDCABI.abi,
@@ -49,11 +48,12 @@ export default function PublisherPage() {
     query: { enabled: !!USDC_ADDRESS && !!address, refetchInterval: 15_000 },
   });
 
-  // Claim domain
   const { mutate: claimDomain, isPending: isClaimPending, data: claimTx } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimTx });
 
-  // Watch LicenseMinted events — collect ones for this publisher
+  const { mutate: mintUsdc, isPending: isMinting, data: mintTx } = useWriteContract();
+  const { isSuccess: mintConfirmed } = useWaitForTransactionReceipt({ hash: mintTx });
+
   useWatchContractEvent({
     address: LICENSE_ENGINE_ADDRESS,
     abi: LicenseEngineABI.abi,
@@ -92,32 +92,58 @@ export default function PublisherPage() {
   const walletBalance = walletUsdcBalance ? BigInt(walletUsdcBalance as bigint) : 0n;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">Eye:Witness</Link>
+    <main className="min-h-screen bg-[#0a0806]">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0a0806]/88 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="font-bold text-lg tracking-tight text-[#f5f0eb]">
+          Eye<span className="text-orange-500">:</span>Witness
+        </Link>
         <ConnectButton />
       </nav>
 
-      <div className="mx-auto max-w-3xl px-4 py-12 space-y-8">
-        <h1 className="text-2xl font-bold text-gray-900">Publisher Escrow</h1>
+      <div className="mx-auto max-w-3xl px-4 py-12 space-y-6">
+        <h1 className="text-2xl font-bold text-[#f5f0eb] tracking-tight">Publisher Escrow</h1>
 
         {!isConnected ? (
-          <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
-            <p className="text-gray-600 mb-4">Connect your wallet to manage escrow.</p>
+          <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-6 py-10 text-center">
+            <p className="text-[#a89f96] mb-5">Connect your wallet to manage escrow.</p>
             <ConnectButton />
           </div>
         ) : (
           <>
-            {/* Balances */}
             <div className="grid grid-cols-2 gap-4">
               <StatCard label="Wallet USDC" value={`$${formatUnits(walletBalance, 6)}`} />
               <StatCard label="Escrow Balance" value={`$${formatUnits(balance, 6)}`} highlight />
             </div>
 
+            {/* Mint test USDC */}
+            <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6">
+              <h2 className="font-semibold text-[#f5f0eb] mb-1">Get Test USDC</h2>
+              <p className="text-sm text-[#6b6259] mb-4">
+                Mint yourself 100 MockUSDC on Sepolia testnet to use for deposits.
+              </p>
+              <button
+                disabled={isMinting || !USDC_ADDRESS}
+                onClick={() =>
+                  mintUsdc({
+                    address: USDC_ADDRESS!,
+                    abi: MockUSDCABI.abi,
+                    functionName: "mint",
+                    args: [address!, parseUnits("100", 6)],
+                  })
+                }
+                className="rounded-lg border border-white/[0.12] bg-white/[0.04] px-4 py-2 text-sm font-semibold text-[#f5f0eb] hover:bg-white/[0.08] disabled:opacity-40 transition-colors"
+              >
+                {isMinting ? "Minting…" : "Mint 100 USDC"}
+              </button>
+              {mintConfirmed && (
+                <p className="mt-2 text-sm text-emerald-400">100 USDC minted — refresh balance above.</p>
+              )}
+            </section>
+
             {/* Deposit */}
-            <section className="rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="font-semibold text-gray-900 mb-4">Deposit USDC</h2>
-              <p className="text-sm text-gray-500 mb-4">
+            <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6">
+              <h2 className="font-semibold text-[#f5f0eb] mb-1">Deposit USDC</h2>
+              <p className="text-sm text-[#6b6259] mb-4">
                 Deposits are held in escrow. The agent deducts the license fee automatically when your licensed photos are detected.
               </p>
               <div className="flex gap-3">
@@ -128,25 +154,25 @@ export default function PublisherPage() {
                   placeholder="Amount (USDC)"
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-lg border border-white/[0.1] bg-[#0a0806] px-3 py-2 text-sm text-[#f5f0eb] placeholder-[#6b6259] focus:outline-none focus:ring-1 focus:ring-orange-500/40 focus:border-orange-500/40"
                 />
                 <button
                   disabled={!depositAmount || isDepositing}
                   onClick={() => deposit(depositAmount)}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors"
                 >
                   {depositStep === "approving" ? "Approving…" : depositStep === "depositing" ? "Depositing…" : "Deposit"}
                 </button>
               </div>
               {depositError && (
-                <p className="mt-2 text-sm text-red-600">{depositError.message}</p>
+                <p className="mt-2 text-sm text-red-400">{depositError.message}</p>
               )}
             </section>
 
             {/* Claim domain */}
-            <section className="rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="font-semibold text-gray-900 mb-1">Claim Your Domain</h2>
-              <p className="text-sm text-gray-500 mb-4">
+            <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6">
+              <h2 className="font-semibold text-[#f5f0eb] mb-1">Claim Your Domain</h2>
+              <p className="text-sm text-[#6b6259] mb-4">
                 Register your domain on-chain so the detection agent can identify you as the publisher for automatic licensing.
               </p>
               <div className="flex gap-3">
@@ -155,7 +181,7 @@ export default function PublisherPage() {
                   placeholder="yourdomain.com"
                   value={domain}
                   onChange={(e) => setDomain(e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-lg border border-white/[0.1] bg-[#0a0806] px-3 py-2 text-sm text-[#f5f0eb] placeholder-[#6b6259] focus:outline-none focus:ring-1 focus:ring-orange-500/40 focus:border-orange-500/40"
                 />
                 <button
                   disabled={!domain || isClaimPending}
@@ -167,51 +193,51 @@ export default function PublisherPage() {
                       args: [domain],
                     })
                   }
-                  className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900 disabled:opacity-40 transition-colors"
+                  className="rounded-lg border border-white/[0.12] bg-white/[0.04] px-4 py-2 text-sm font-semibold text-[#f5f0eb] hover:bg-white/[0.08] disabled:opacity-40 transition-colors"
                 >
                   {isClaimPending ? "Claiming…" : "Claim Domain"}
                 </button>
               </div>
               {claimConfirmed && (
-                <p className="mt-2 text-sm text-green-600">Domain claimed successfully.</p>
+                <p className="mt-2 text-sm text-emerald-400">Domain claimed successfully.</p>
               )}
             </section>
 
             {/* License history */}
-            <section className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-900">Active Licenses</h2>
-                <p className="text-xs text-gray-500 mt-0.5">Licenses minted for your wallet in this session</p>
+            <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/[0.07]">
+                <h2 className="font-semibold text-[#f5f0eb]">Active Licenses</h2>
+                <p className="text-xs text-[#6b6259] mt-0.5">Licenses minted for your wallet in this session</p>
               </div>
               {licenses.length === 0 ? (
-                <div className="px-6 py-8 text-center text-sm text-gray-400">
+                <div className="px-6 py-10 text-center text-sm text-[#6b6259]">
                   No licenses yet. Licenses appear here as the agent processes detections.
                 </div>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-[#0a0806] border-b border-white/[0.07]">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Use Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tx</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">URL</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Use Type</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Tx</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody>
                     {licenses.map((l, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-xs text-gray-600 truncate max-w-xs">
-                          <a href={l.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{l.url}</a>
+                      <tr key={i} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
+                        <td className="px-4 py-3 text-xs text-[#a89f96] truncate max-w-xs">
+                          <a href={l.url} target="_blank" rel="noopener noreferrer" className="hover:text-[#f5f0eb] transition-colors">{l.url}</a>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{l.useType}</span>
+                          <span className="rounded-full bg-orange-500/[0.1] border border-orange-500/20 px-2 py-0.5 text-xs font-medium text-orange-400">{l.useType}</span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-500">
+                        <td className="px-4 py-3 text-xs text-[#6b6259]">
                           {new Date(Number(l.timestamp) * 1000).toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3">
                           {l.txHash && (
-                            <a href={`https://sepolia.etherscan.io/tx/${l.txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                            <a href={`https://sepolia.etherscan.io/tx/${l.txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-400/60 hover:text-orange-400 transition-colors">
                               View ↗
                             </a>
                           )}
@@ -231,9 +257,9 @@ export default function PublisherPage() {
 
 function StatCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className={`rounded-lg border px-4 py-5 ${highlight ? "border-blue-200 bg-blue-50" : "border-gray-200 bg-white"}`}>
-      <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${highlight ? "text-blue-700" : "text-gray-900"}`}>{value}</p>
+    <div className={`rounded-xl border px-5 py-5 ${highlight ? "border-orange-500/[0.25] bg-orange-500/[0.06]" : "border-white/[0.08] bg-[#0d0b08]"}`}>
+      <p className="text-[11px] text-[#6b6259] uppercase tracking-widest">{label}</p>
+      <p className={`mt-1.5 text-2xl font-bold ${highlight ? "text-orange-400" : "text-[#f5f0eb]"}`}>{value}</p>
     </div>
   );
 }

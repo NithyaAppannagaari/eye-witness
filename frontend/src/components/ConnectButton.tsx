@@ -27,7 +27,7 @@ export function ConnectButton() {
     return (
       <button
         onClick={() => disconnect()}
-        className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        className="rounded-lg border border-white/[0.12] bg-white/[0.04] px-4 py-2 text-sm font-medium text-[#f5f0eb] hover:bg-white/[0.08] transition-colors"
       >
         {address.slice(0, 6)}…{address.slice(-4)}
       </button>
@@ -40,7 +40,7 @@ export function ConnectButton() {
     <button
       onClick={() => connect({ connector: injected })}
       disabled={isPending}
-      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+      className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors"
     >
       {isPending ? "Connecting…" : "Connect Wallet"}
     </button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ConnectButton } from "@/components/ConnectButton";
 import { useConnection } from "wagmi";
@@ -28,42 +29,44 @@ export default function RegisterPage() {
   const canSubmit = isConnected && photoData && !isPending && !isConfirming;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <span className="font-bold text-lg tracking-tight">Eye:Witness</span>
+    <main className="min-h-screen bg-[#0a0806]">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0a0806]/88 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="font-bold text-lg tracking-tight text-[#f5f0eb]">
+          Eye<span className="text-orange-500">:</span>Witness
+        </Link>
         <ConnectButton />
       </nav>
 
       <div className="mx-auto max-w-xl px-4 py-12">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Register a Photo</h1>
-        <p className="text-sm text-gray-500 mb-8">
-          Commit a timestamped, GPS-verified provenance record on Base Sepolia.
+        <h1 className="text-2xl font-bold text-[#f5f0eb] mb-2 tracking-tight">Register a Photo</h1>
+        <p className="text-sm text-[#6b6259] mb-8">
+          Commit a timestamped, GPS-verified provenance record on Ethereum Sepolia.
         </p>
 
         {!isConnected ? (
-          <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
-            <p className="text-gray-600 mb-4">Connect your wallet to register a photo.</p>
+          <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-6 py-10 text-center">
+            <p className="text-[#a89f96] mb-5">Connect your wallet to register a photo.</p>
             <ConnectButton />
           </div>
         ) : (
-          <div className="space-y-8">
-            <section className="rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="font-semibold text-gray-900 mb-4">1. Upload Photo</h2>
+          <div className="space-y-6">
+            <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6">
+              <h2 className="font-semibold text-[#f5f0eb] mb-4">1. Upload Photo</h2>
               <PhotoUpload walletAddress={address!} onPhotoReady={setPhotoData} />
 
               {photoData && (
-                <div className="mt-4 rounded bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-800 space-y-1">
-                  <p><span className="font-medium">Timestamp:</span> {photoData.timestamp}</p>
-                  <p><span className="font-medium">GPS:</span> {photoData.lat.toFixed(5)}, {photoData.lng.toFixed(5)}</p>
+                <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] px-4 py-3 text-sm text-emerald-400 space-y-1">
+                  <p><span className="font-medium text-emerald-300">Timestamp:</span> {photoData.timestamp}</p>
+                  <p><span className="font-medium text-emerald-300">GPS:</span> {photoData.lat.toFixed(5)}, {photoData.lng.toFixed(5)}</p>
                   <p className="font-mono text-xs truncate">
-                    <span className="font-medium not-italic">Image hash:</span> {photoData.imageHash}
+                    <span className="font-medium not-italic text-emerald-300">Image hash:</span> {photoData.imageHash}
                   </p>
                 </div>
               )}
             </section>
 
-            <section className="rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="font-semibold text-gray-900 mb-4">2. Set License Rules</h2>
+            <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6">
+              <h2 className="font-semibold text-[#f5f0eb] mb-4">2. Set License Rules</h2>
               <LicenseRulesForm rules={rules} onChange={setRules} />
             </section>
 
@@ -72,7 +75,7 @@ export default function RegisterPage() {
               onClick={() => {
                 if (photoData) register(photoData.imageHash, photoData.metadataHash, rules);
               }}
-              className="w-full rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-full rounded-xl bg-orange-500 px-4 py-3.5 font-semibold text-white hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_24px_rgba(249,115,22,0.3)]"
             >
               {isPending
                 ? "Waiting for wallet…"
@@ -82,13 +85,13 @@ export default function RegisterPage() {
             </button>
 
             {txHash && (
-              <p className="text-sm text-gray-500 text-center">
+              <p className="text-sm text-[#6b6259] text-center">
                 Tx:{" "}
                 <a
                   href={`https://sepolia.etherscan.io/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-600 underline font-mono"
+                  className="text-orange-400 underline font-mono hover:text-orange-300 transition-colors"
                 >
                   {txHash.slice(0, 10)}…{txHash.slice(-8)}
                 </a>
@@ -96,7 +99,7 @@ export default function RegisterPage() {
             )}
 
             {error && (
-              <div className="rounded bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              <div className="rounded-xl border border-red-500/20 bg-red-500/[0.07] px-4 py-3 text-sm text-red-400">
                 {error.message}
               </div>
             )}

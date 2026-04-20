@@ -14,11 +14,11 @@ export function LicenseRulesForm({ rules, onChange }: Props) {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold text-gray-900">License Pricing (USDC)</h3>
+      <h3 className="font-semibold text-[#f5f0eb]">License Pricing (USDC)</h3>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <label className="block">
-          <span className="text-sm text-gray-600">Editorial</span>
+          <span className="text-sm text-[#a89f96]">Editorial</span>
           <input
             type="number"
             min="0"
@@ -26,12 +26,12 @@ export function LicenseRulesForm({ rules, onChange }: Props) {
             value={rules.editorialPrice}
             onChange={(e) => update("editorialPrice", e.target.value)}
             placeholder="e.g. 1.00"
-            className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="mt-1.5 block w-full rounded-lg border border-white/[0.1] bg-[#0a0806] px-3 py-2 text-sm text-[#f5f0eb] placeholder-[#6b6259] focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/30"
           />
         </label>
 
         <label className="block">
-          <span className="text-sm text-gray-600">Commercial</span>
+          <span className="text-sm text-[#a89f96]">Commercial</span>
           <input
             type="number"
             min="0"
@@ -39,12 +39,12 @@ export function LicenseRulesForm({ rules, onChange }: Props) {
             value={rules.commercialPrice}
             onChange={(e) => update("commercialPrice", e.target.value)}
             placeholder="e.g. 5.00"
-            className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="mt-1.5 block w-full rounded-lg border border-white/[0.1] bg-[#0a0806] px-3 py-2 text-sm text-[#f5f0eb] placeholder-[#6b6259] focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/30"
           />
         </label>
 
         <label className="block">
-          <span className="text-sm text-gray-600">AI Training</span>
+          <span className="text-sm text-[#a89f96]">AI Training</span>
           <input
             type="number"
             min="0"
@@ -53,19 +53,19 @@ export function LicenseRulesForm({ rules, onChange }: Props) {
             onChange={(e) => update("aiTrainingPrice", e.target.value)}
             placeholder="e.g. 10.00"
             disabled={rules.blockAiTraining}
-            className="mt-1 block w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none disabled:bg-gray-100 disabled:text-gray-400"
+            className="mt-1.5 block w-full rounded-lg border border-white/[0.1] bg-[#0a0806] px-3 py-2 text-sm text-[#f5f0eb] placeholder-[#6b6259] focus:border-orange-500/50 focus:outline-none focus:ring-1 focus:ring-orange-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
           />
         </label>
       </div>
 
-      <label className="flex items-center gap-2 cursor-pointer">
+      <label className="flex items-center gap-2.5 cursor-pointer">
         <input
           type="checkbox"
           checked={rules.blockAiTraining}
           onChange={(e) => update("blockAiTraining", e.target.checked)}
-          className="h-4 w-4 rounded border-gray-300 text-blue-600"
+          className="h-4 w-4 rounded border-white/20 bg-[#0a0806] accent-orange-500"
         />
-        <span className="text-sm text-gray-700">Block AI training use entirely</span>
+        <span className="text-sm text-[#a89f96]">Block AI training use entirely</span>
       </label>
     </div>
   );

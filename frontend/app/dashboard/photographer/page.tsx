@@ -48,20 +48,20 @@ type Tab = "photos" | "disputes";
 function disputeStatusBadge(status: string) {
   if (status === "resolved") {
     return (
-      <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+      <span className="inline-flex items-center rounded-full bg-emerald-500/[0.1] border border-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
         RESOLVED
       </span>
     );
   }
   if (status === "dmca_sent") {
     return (
-      <span className="inline-flex items-center rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-800">
+      <span className="inline-flex items-center rounded-full bg-orange-500/[0.1] border border-orange-500/20 px-2 py-0.5 text-xs font-medium text-orange-400">
         DMCA SENT
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800">
+    <span className="inline-flex items-center rounded-full bg-amber-500/[0.1] border border-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
       OPEN
     </span>
   );
@@ -76,7 +76,6 @@ export default function PhotographerDashboard() {
   const [disputes, setDisputes] = useState<Dispute[]>([]);
   const [detectionsByPhoto, setDetectionsByPhoto] = useState<Map<string, number>>(new Map());
 
-  // Watch PhotoRegistered events
   useWatchContractEvent({
     address: CONTRACT_ADDRESS,
     abi: PhotoRegistryABI.abi,
@@ -99,7 +98,6 @@ export default function PhotographerDashboard() {
     enabled: !!CONTRACT_ADDRESS && isConnected,
   });
 
-  // Watch LicenseMinted events — accumulate USDC earned for this photographer's photos
   useWatchContractEvent({
     address: LICENSE_ENGINE_ADDRESS,
     abi: LicenseEngineABI.abi,
@@ -121,7 +119,6 @@ export default function PhotographerDashboard() {
     enabled: !!LICENSE_ENGINE_ADDRESS && isConnected && registrations.length > 0,
   });
 
-  // Fetch detections from agent API
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
@@ -144,7 +141,6 @@ export default function PhotographerDashboard() {
     return () => { cancelled = true; clearInterval(interval); };
   }, [address]);
 
-  // Fetch disputes from agent API (polls every 30s)
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
@@ -174,45 +170,47 @@ export default function PhotographerDashboard() {
   const totalDetections = detections.length;
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">Eye:Witness</Link>
+    <main className="min-h-screen bg-[#0a0806]">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0a0806]/88 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="font-bold text-lg tracking-tight text-[#f5f0eb]">
+          Eye<span className="text-orange-500">:</span>Witness
+        </Link>
         <ConnectButton />
       </nav>
 
       <div className="mx-auto max-w-4xl px-4 py-12">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Photographer Dashboard</h1>
+          <h1 className="text-2xl font-bold text-[#f5f0eb] tracking-tight">Photographer Dashboard</h1>
           <Link
             href="/register"
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors"
+            className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 transition-colors"
           >
             + Register Photo
           </Link>
         </div>
 
         {!isConnected ? (
-          <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
-            <p className="text-gray-600 mb-4">Connect your wallet to view your photos.</p>
+          <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-6 py-10 text-center">
+            <p className="text-[#a89f96] mb-5">Connect your wallet to view your photos.</p>
             <ConnectButton />
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-4 mb-8">
+            <div className="grid grid-cols-3 gap-4 mb-7">
               <StatCard label="Photos Registered" value={registrations.length} />
               <StatCard label="USDC Earned" value={`$${formatUnits(usdcEarned, 6)}`} />
               <StatCard label="Detections" value={totalDetections} />
             </div>
 
             {/* Tab switcher */}
-            <div className="flex gap-1 mb-4 border-b border-gray-200">
+            <div className="flex gap-1 mb-5 border-b border-white/[0.07]">
               <TabButton active={tab === "photos"} onClick={() => setTab("photos")}>
                 Registered Photos
               </TabButton>
               <TabButton active={tab === "disputes"} onClick={() => setTab("disputes")}>
                 Disputes
                 {disputes.length > 0 && (
-                  <span className="ml-2 rounded-full bg-orange-100 px-1.5 py-0.5 text-xs font-medium text-orange-700">
+                  <span className="ml-2 rounded-full bg-orange-500/[0.15] border border-orange-500/20 px-1.5 py-0.5 text-xs font-medium text-orange-400">
                     {disputes.length}
                   </span>
                 )}
@@ -221,35 +219,35 @@ export default function PhotographerDashboard() {
 
             {tab === "photos" && (
               registrations.length === 0 ? (
-                <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
-                  <p className="text-gray-500 text-sm">No photos registered yet, or events occurred before this session.</p>
-                  <p className="text-gray-400 text-xs mt-1">Register a photo and it will appear here in real time.</p>
+                <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-6 py-10 text-center">
+                  <p className="text-[#a89f96] text-sm">No photos registered yet, or events occurred before this session.</p>
+                  <p className="text-[#6b6259] text-xs mt-1">Register a photo and it will appear here in real time.</p>
                 </div>
               ) : (
-                <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-[#0a0806] border-b border-white/[0.07]">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo Hash</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registered</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Detections</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Photo Hash</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Registered</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Detections</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody>
                       {registrations.map((r) => (
-                        <tr key={r.photoHash} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 font-mono text-xs text-gray-600 truncate max-w-xs">
+                        <tr key={r.photoHash} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
+                          <td className="px-4 py-3 font-mono text-xs text-[#a89f96] truncate max-w-xs">
                             {r.photoHash.slice(0, 18)}…
                           </td>
-                          <td className="px-4 py-3 text-gray-700">
+                          <td className="px-4 py-3 text-[#a89f96] text-xs">
                             {new Date(Number(r.timestamp) * 1000).toLocaleDateString()}
                           </td>
-                          <td className="px-4 py-3 text-gray-700 text-xs">
+                          <td className="px-4 py-3 text-[#a89f96] text-xs">
                             {detectionsByPhoto.get(r.photoHash.toLowerCase()) ?? 0}
                           </td>
                           <td className="px-4 py-3">
-                            <Link href={`/photo/${r.photoHash}`} className="text-blue-600 hover:underline text-xs">
+                            <Link href={`/photo/${r.photoHash}`} className="text-orange-400 hover:text-orange-300 text-xs transition-colors">
                               View provenance →
                             </Link>
                             {r.txHash && (
@@ -257,7 +255,7 @@ export default function PhotographerDashboard() {
                                 href={`https://sepolia.etherscan.io/tx/${r.txHash}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="ml-3 text-gray-400 hover:text-gray-600 text-xs"
+                                className="ml-3 text-orange-400/50 hover:text-orange-400 text-xs transition-colors"
                               >
                                 Etherscan ↗
                               </a>
@@ -273,48 +271,61 @@ export default function PhotographerDashboard() {
 
             {tab === "disputes" && (
               disputes.length === 0 ? (
-                <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
-                  <p className="text-gray-500 text-sm">No enforcement actions yet.</p>
-                  <p className="text-gray-400 text-xs mt-1">Disputes appear here when the agent detects unlicensed usage that can&apos;t be auto-paid.</p>
+                <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-6 py-10 text-center">
+                  <p className="text-[#a89f96] text-sm">No enforcement actions yet.</p>
+                  <p className="text-[#6b6259] text-xs mt-1">Disputes appear here when the agent detects unlicensed usage that can&apos;t be auto-paid.</p>
                 </div>
               ) : (
-                <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+                <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] overflow-hidden">
                   <table className="w-full text-sm">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-[#0a0806] border-b border-white/[0.07]">
                       <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Infringing URL</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Use Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dispute #</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Infringing URL</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Use Type</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Dispute #</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Status</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Date</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody>
                       {disputes.map((d) => (
-                        <tr key={d.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-xs text-gray-700 max-w-xs truncate">
+                        <tr key={d.id} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
+                          <td className="px-4 py-3 text-xs text-[#a89f96] max-w-xs truncate">
                             <a
                               href={d.pageUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline"
+                              className="hover:text-[#f5f0eb] transition-colors"
                             >
                               {d.pageUrl}
                             </a>
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-600 capitalize">
+                          <td className="px-4 py-3 text-xs text-[#a89f96] capitalize">
                             {d.useType ?? "—"}
                           </td>
-                          <td className="px-4 py-3 text-xs font-mono text-gray-600">
+                          <td className="px-4 py-3 text-xs font-mono text-[#a89f96]">
                             {d.disputeId != null ? `#${d.disputeId}` : "—"}
                           </td>
                           <td className="px-4 py-3">
                             {disputeStatusBadge(d.status)}
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-500">
+                          <td className="px-4 py-3 text-xs text-[#6b6259]">
                             {d.dmcaSentAt
                               ? new Date(d.dmcaSentAt).toLocaleDateString()
                               : new Date(d.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3">
+                            {d.status !== "resolved" && (
+                              <button
+                                onClick={async () => {
+                                  await fetch(`${AGENT_API}/api/detections/${d.id}/requeue`, { method: "POST" });
+                                }}
+                                className="text-xs text-orange-400/60 hover:text-orange-400 transition-colors"
+                              >
+                                Retry payment →
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -332,9 +343,9 @@ export default function PhotographerDashboard() {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white px-4 py-5">
-      <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+    <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-5 py-5">
+      <p className="text-[11px] text-[#6b6259] uppercase tracking-widest">{label}</p>
+      <p className="mt-1.5 text-2xl font-bold text-[#f5f0eb]">{value}</p>
     </div>
   );
 }
@@ -343,10 +354,10 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+      className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
         active
-          ? "border-blue-600 text-blue-600"
-          : "border-transparent text-gray-500 hover:text-gray-700"
+          ? "border-orange-500 text-orange-400"
+          : "border-transparent text-[#6b6259] hover:text-[#a89f96]"
       }`}
     >
       {children}

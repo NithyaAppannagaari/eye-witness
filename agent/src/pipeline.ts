@@ -46,7 +46,8 @@ export async function processPending(): Promise<void> {
             updateDetection(row.id, { status: 'already_licensed', matchedPhotoHash: imageHash, ownerWallet: photo.owner })
             continue
           }
-          updateDetection(row.id, { status: 'matched', matchedPhotoHash: imageHash, ownerWallet: photo.owner })
+          // Exact SHA-256 match = same bytes = provenance implicitly verified, skip metadata re-check
+          updateDetection(row.id, { status: 'verified', matchedPhotoHash: imageHash, ownerWallet: photo.owner })
         }
       }
     } catch { /* network error — fall through to pHash */ }

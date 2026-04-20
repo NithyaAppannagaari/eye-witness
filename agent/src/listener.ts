@@ -47,7 +47,7 @@ export function startListener(): void {
     try {
       const db = getDb()
       const row = db
-        .prepare("SELECT id, disputeId, pageUrl, dmcaEmail, ownerWallet FROM detections WHERE matchedPhotoHash = ? AND disputeId IS NOT NULL AND status = 'dmca_sent'")
+        .prepare("SELECT id, disputeId, pageUrl, dmcaEmail, ownerWallet FROM detections WHERE LOWER(matchedPhotoHash) = LOWER(?) AND disputeId IS NOT NULL AND status NOT IN ('resolved', 'paid', 'no_match', 'pending')")
         .get(photoId) as { id: number; disputeId: number; pageUrl: string; dmcaEmail: string | null; ownerWallet: string | null } | undefined
 
       if (row?.disputeId != null) {

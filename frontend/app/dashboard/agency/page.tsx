@@ -31,7 +31,6 @@ export default function AgencyDashboard() {
 
   const { stake, step: stakeStep, isPending: isStaking, error: stakeError, reset: resetStake } = useAgencyStaking();
 
-  // Load portfolio from localStorage
   useEffect(() => {
     if (!address) return;
     const stored = localStorage.getItem(`portfolio:${address}`) ?? "[]";
@@ -43,7 +42,6 @@ export default function AgencyDashboard() {
     setPortfolio(updated);
   };
 
-  // Read agency stake
   const { data: stakeBalance, refetch: refetchStake } = useReadContract({
     address: VAULT_ADDRESS,
     abi: EscrowVaultABI.abi,
@@ -52,7 +50,6 @@ export default function AgencyDashboard() {
     query: { enabled: !!VAULT_ADDRESS && !!address, refetchInterval: 15_000 },
   });
 
-  // Read USDC wallet balance
   const { data: walletUsdcBalance } = useReadContract({
     address: USDC_ADDRESS,
     abi: MockUSDCABI.abi,
@@ -61,7 +58,6 @@ export default function AgencyDashboard() {
     query: { enabled: !!USDC_ADDRESS && !!address, refetchInterval: 15_000 },
   });
 
-  // Watch LicenseMinted — collect events for portfolio photos
   useWatchContractEvent({
     address: LICENSE_ENGINE_ADDRESS,
     abi: LicenseEngineABI.abi,
@@ -100,23 +96,24 @@ export default function AgencyDashboard() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="font-bold text-lg tracking-tight">Eye:Witness</Link>
+    <main className="min-h-screen bg-[#0a0806]">
+      <nav className="sticky top-0 z-50 border-b border-white/[0.07] bg-[#0a0806]/88 backdrop-blur-md px-6 py-4 flex items-center justify-between">
+        <Link href="/" className="font-bold text-lg tracking-tight text-[#f5f0eb]">
+          Eye<span className="text-orange-500">:</span>Witness
+        </Link>
         <ConnectButton />
       </nav>
 
-      <div className="mx-auto max-w-3xl px-4 py-12 space-y-8">
-        <h1 className="text-2xl font-bold text-gray-900">Agency Dashboard</h1>
+      <div className="mx-auto max-w-3xl px-4 py-12 space-y-6">
+        <h1 className="text-2xl font-bold text-[#f5f0eb] tracking-tight">Agency Dashboard</h1>
 
         {!isConnected ? (
-          <div className="rounded-lg border border-gray-200 bg-white px-6 py-10 text-center">
-            <p className="text-gray-600 mb-4">Connect your wallet to manage your agency.</p>
+          <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-6 py-10 text-center">
+            <p className="text-[#a89f96] mb-5">Connect your wallet to manage your agency.</p>
             <ConnectButton />
           </div>
         ) : (
           <>
-            {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
               <StatCard label="Wallet USDC" value={`$${formatUnits(walletBalance, 6)}`} />
               <StatCard label="Agency Stake" value={`$${formatUnits(stake_, 6)}`} highlight />
@@ -124,9 +121,9 @@ export default function AgencyDashboard() {
             </div>
 
             {/* Stake */}
-            <section className="rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="font-semibold text-gray-900 mb-1">Stake USDC</h2>
-              <p className="text-sm text-gray-500 mb-4">
+            <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6">
+              <h2 className="font-semibold text-[#f5f0eb] mb-1">Stake USDC</h2>
+              <p className="text-sm text-[#6b6259] mb-4">
                 Your stake backs the agent. The agent routes its fee cut back to replenish your stake automatically.
               </p>
               <div className="flex gap-3">
@@ -137,49 +134,49 @@ export default function AgencyDashboard() {
                   placeholder="Amount (USDC)"
                   value={stakeAmount}
                   onChange={(e) => setStakeAmount(e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-lg border border-white/[0.1] bg-[#0a0806] px-3 py-2 text-sm text-[#f5f0eb] placeholder-[#6b6259] focus:outline-none focus:ring-1 focus:ring-orange-500/40 focus:border-orange-500/40"
                 />
                 <button
                   disabled={!stakeAmount || isStaking}
                   onClick={() => stake(stakeAmount)}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors"
                 >
                   {stakeStep === "approving" ? "Approving…" : stakeStep === "staking" ? "Staking…" : "Stake"}
                 </button>
               </div>
-              {stakeError && <p className="mt-2 text-sm text-red-600">{stakeError.message}</p>}
+              {stakeError && <p className="mt-2 text-sm text-red-400">{stakeError.message}</p>}
             </section>
 
             {/* Portfolio */}
-            <section className="rounded-lg border border-gray-200 bg-white p-6">
-              <h2 className="font-semibold text-gray-900 mb-1">Portfolio</h2>
-              <p className="text-sm text-gray-500 mb-4">Add photographer wallet addresses to track earnings across their photos.</p>
+            <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6">
+              <h2 className="font-semibold text-[#f5f0eb] mb-1">Portfolio</h2>
+              <p className="text-sm text-[#6b6259] mb-4">Add photographer wallet addresses to track earnings across their photos.</p>
               <div className="flex gap-3 mb-4">
                 <input
                   type="text"
                   placeholder="0x photographer wallet"
                   value={newPhotographer}
                   onChange={(e) => setNewPhotographer(e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 rounded-lg border border-white/[0.1] bg-[#0a0806] px-3 py-2 text-sm font-mono text-[#f5f0eb] placeholder-[#6b6259] focus:outline-none focus:ring-1 focus:ring-orange-500/40 focus:border-orange-500/40"
                 />
                 <button
                   disabled={!newPhotographer}
                   onClick={addPhotographer}
-                  className="rounded-lg bg-gray-800 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-900 disabled:opacity-40 transition-colors"
+                  className="rounded-lg border border-white/[0.12] bg-white/[0.04] px-4 py-2 text-sm font-semibold text-[#f5f0eb] hover:bg-white/[0.08] disabled:opacity-40 transition-colors"
                 >
                   Add
                 </button>
               </div>
               {portfolio.length === 0 ? (
-                <p className="text-sm text-gray-400">No photographers in portfolio yet.</p>
+                <p className="text-sm text-[#6b6259]">No photographers in portfolio yet.</p>
               ) : (
                 <ul className="space-y-2">
                   {portfolio.map((w) => (
-                    <li key={w} className="flex items-center justify-between rounded bg-gray-50 px-3 py-2">
-                      <span className="font-mono text-xs text-gray-600">{w}</span>
+                    <li key={w} className="flex items-center justify-between rounded-lg border border-white/[0.07] bg-[#0a0806] px-3 py-2.5">
+                      <span className="font-mono text-xs text-[#a89f96]">{w}</span>
                       <button
                         onClick={() => savePortfolio(portfolio.filter((x) => x !== w))}
-                        className="text-xs text-red-400 hover:text-red-600"
+                        className="text-xs text-red-400/60 hover:text-red-400 transition-colors"
                       >
                         Remove
                       </button>
@@ -190,40 +187,40 @@ export default function AgencyDashboard() {
             </section>
 
             {/* Earnings */}
-            <section className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <h2 className="font-semibold text-gray-900">License Earnings</h2>
-                <p className="text-xs text-gray-500 mt-0.5">All LicenseMinted events in this session</p>
+            <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] overflow-hidden">
+              <div className="px-6 py-4 border-b border-white/[0.07]">
+                <h2 className="font-semibold text-[#f5f0eb]">License Earnings</h2>
+                <p className="text-xs text-[#6b6259] mt-0.5">All LicenseMinted events in this session</p>
               </div>
               {earnings.length === 0 ? (
-                <div className="px-6 py-8 text-center text-sm text-gray-400">
+                <div className="px-6 py-10 text-center text-sm text-[#6b6259]">
                   No earnings yet this session.
                 </div>
               ) : (
                 <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200">
+                  <thead className="bg-[#0a0806] border-b border-white/[0.07]">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Use Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tx</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">URL</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Use Type</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Date</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Tx</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody>
                     {earnings.map((e, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 text-xs text-gray-600 truncate max-w-xs">
-                          <a href={e.url} target="_blank" rel="noopener noreferrer" className="hover:underline">{e.url}</a>
+                      <tr key={i} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
+                        <td className="px-4 py-3 text-xs text-[#a89f96] truncate max-w-xs">
+                          <a href={e.url} target="_blank" rel="noopener noreferrer" className="hover:text-[#f5f0eb] transition-colors">{e.url}</a>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">{e.useType}</span>
+                          <span className="rounded-full bg-emerald-500/[0.1] border border-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">{e.useType}</span>
                         </td>
-                        <td className="px-4 py-3 text-xs text-gray-500">
+                        <td className="px-4 py-3 text-xs text-[#6b6259]">
                           {new Date(Number(e.timestamp) * 1000).toLocaleDateString()}
                         </td>
                         <td className="px-4 py-3">
                           {e.txHash && (
-                            <a href={`https://sepolia.etherscan.io/tx/${e.txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                            <a href={`https://sepolia.etherscan.io/tx/${e.txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-400/60 hover:text-orange-400 transition-colors">
                               View ↗
                             </a>
                           )}
@@ -243,9 +240,9 @@ export default function AgencyDashboard() {
 
 function StatCard({ label, value, highlight }: { label: string; value: string | number; highlight?: boolean }) {
   return (
-    <div className={`rounded-lg border px-4 py-5 ${highlight ? "border-blue-200 bg-blue-50" : "border-gray-200 bg-white"}`}>
-      <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
-      <p className={`mt-1 text-2xl font-bold ${highlight ? "text-blue-700" : "text-gray-900"}`}>{value}</p>
+    <div className={`rounded-xl border px-5 py-5 ${highlight ? "border-orange-500/[0.25] bg-orange-500/[0.06]" : "border-white/[0.08] bg-[#0d0b08]"}`}>
+      <p className="text-[11px] text-[#6b6259] uppercase tracking-widest">{label}</p>
+      <p className={`mt-1.5 text-2xl font-bold ${highlight ? "text-orange-400" : "text-[#f5f0eb]"}`}>{value}</p>
     </div>
   );
 }

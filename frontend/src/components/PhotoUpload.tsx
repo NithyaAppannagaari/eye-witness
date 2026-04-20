@@ -76,17 +76,17 @@ export function PhotoUpload({ walletAddress, onPhotoReady }: Props) {
   return (
     <div className="space-y-4">
       <label className="block cursor-pointer">
-        <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-10 hover:border-blue-400 hover:bg-blue-50 transition-colors">
+        <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-orange-500/25 bg-orange-500/[0.04] px-6 py-10 hover:border-orange-500/50 hover:bg-orange-500/[0.07] transition-colors">
           {preview ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="preview" className="max-h-48 rounded object-contain" />
+            <img src={preview} alt="preview" className="max-h-48 rounded-lg object-contain" />
           ) : (
             <>
-              <svg className="mb-2 h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="mb-3 h-9 w-9 text-orange-400/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
               </svg>
-              <span className="text-sm text-gray-500">Click to upload a photo</span>
-              <span className="mt-1 text-xs text-gray-400">JPEG or PNG with GPS EXIF data</span>
+              <span className="text-sm text-[#a89f96]">Click to upload a photo</span>
+              <span className="mt-1 text-xs text-[#6b6259]">JPEG or PNG with GPS EXIF data</span>
             </>
           )}
         </div>
@@ -102,11 +102,11 @@ export function PhotoUpload({ walletAddress, onPhotoReady }: Props) {
       </label>
 
       {loading && (
-        <p className="text-sm text-blue-600">Reading EXIF data and computing hashes…</p>
+        <p className="text-sm text-orange-400">Reading EXIF data and computing hashes…</p>
       )}
 
       {error && (
-        <div className="rounded bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-red-500/20 bg-red-500/[0.07] px-4 py-3 text-sm text-red-400">
           {error}
         </div>
       )}
