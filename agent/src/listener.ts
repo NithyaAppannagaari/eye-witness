@@ -22,17 +22,8 @@ export function startListener(): void {
     return
   }
 
-  // Prefer WebSocket for real-time events; fall back to HTTP polling
-  const wsUrl = rpcUrl.replace(/^https/, 'wss').replace(/^http/, 'ws')
-  let provider: ethers.Provider
-
-  try {
-    provider = new ethers.WebSocketProvider(wsUrl)
-    logger.info('[listener] Connected via WebSocket')
-  } catch {
-    provider = new ethers.JsonRpcProvider(rpcUrl)
-    logger.info('[listener] Falling back to HTTP polling provider')
-  }
+  const provider = new ethers.JsonRpcProvider(rpcUrl)
+  logger.info('[listener] Connected via HTTP polling')
 
   const leAbi = JSON.parse(fs.readFileSync(LICENSE_ENGINE_ABI_PATH, 'utf-8')).abi
   const drAbi = JSON.parse(fs.readFileSync(DISPUTE_REGISTRY_ABI_PATH, 'utf-8')).abi

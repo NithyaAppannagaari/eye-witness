@@ -29,16 +29,13 @@ function getContract(): ethers.Contract {
   const abiJson = JSON.parse(fs.readFileSync(ABI_PATH, 'utf-8'))
   const abi = abiJson.abi ?? abiJson
 
-  const primary = new ethers.JsonRpcProvider(rpcUrl)
-  const provider = fallbackUrl
-    ? new ethers.FallbackProvider([primary, new ethers.JsonRpcProvider(fallbackUrl)])
-    : primary
-
+  const provider = new ethers.JsonRpcProvider(rpcUrl, undefined, { batchMaxCount: 1 })
   contract = new ethers.Contract(contractAddress, abi, provider)
   return contract
 }
 
-const CHUNK_SIZE = 9 // Alchemy free tier: max 10-block range
+const CHUNK_SIZE = 100
+const CHUNK_DELAY_MS = 300 // avoid rate limit
 
 export async function syncRegisteredPhotos(): Promise<void> {
   console.log('[registry] Syncing PhotoRegistered events from chain...')
@@ -47,10 +44,8 @@ export async function syncRegisteredPhotos(): Promise<void> {
 
   const latestBlock = await provider.getBlockNumber()
 
-  // On first sync, only look back 500 blocks (covers recent deployments).
-  // Subsequent syncs start from where we left off.
   const lastSynced = getLastSyncedBlock()
-  const fromBlock = lastSynced ?? Math.max(0, latestBlock - 500)
+  const fromBlock = lastSynced ?? Math.max(0, latestBlock - 50)
 
   let total = 0
   for (let start = fromBlock; start <= latestBlock; start += CHUNK_SIZE) {
@@ -68,6 +63,10 @@ export async function syncRegisteredPhotos(): Promise<void> {
         pHash: null,
       })
       total++
+    }
+
+    if (start + CHUNK_SIZE <= latestBlock) {
+      await new Promise(r => setTimeout(r, CHUNK_DELAY_MS))
     }
   }
 

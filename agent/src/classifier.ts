@@ -1,7 +1,5 @@
 import ollama from 'ollama'
 
-const MODEL = process.env.OLLAMA_MODEL ?? 'llama3.2'
-
 function stripHtml(html: string): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -23,21 +21,19 @@ export async function classifyUse(pageHtml: string): Promise<Classification> {
   try {
     const text = stripHtml(pageHtml)
 
+    const prompt = `Classify how a webpage uses a photo. Respond with JSON only, no markdown.
+Format: {"useType":"editorial"|"commercial"|"ai_training","confidence":0.0-1.0}
+editorial = news, journalism, commentary
+commercial = ads, product pages, sales
+ai_training = AI/ML dataset pages
+
+Page content:
+${text}`
+
     const response = await ollama.chat({
-      model: MODEL,
+      model: 'llama3.2',
+      messages: [{ role: 'user', content: prompt }],
       format: 'json',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You classify how a webpage uses a photo. Respond with JSON only: { "useType": "editorial" | "commercial" | "ai_training", "confidence": 0.0-1.0 }. ' +
-            'editorial = news, journalism, commentary. commercial = ads, product pages, sales. ai_training = AI/ML dataset pages.',
-        },
-        {
-          role: 'user',
-          content: `Classify the use type of a photo on this page:\n\n${text}`,
-        },
-      ],
     })
 
     const parsed = JSON.parse(response.message.content) as { useType?: string; confidence?: number }

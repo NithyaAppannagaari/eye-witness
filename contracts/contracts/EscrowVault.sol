@@ -44,8 +44,8 @@ contract EscrowVault is AccessControl, ReentrancyGuard {
     // --- Publisher escrow ---
 
     function deposit(uint256 amount) external nonReentrant {
-        usdc.transferFrom(msg.sender, address(this), amount);
         publisherBalances[msg.sender] += amount;
+        usdc.transferFrom(msg.sender, address(this), amount);
         emit Deposited(msg.sender, amount);
     }
 
@@ -90,8 +90,8 @@ contract EscrowVault is AccessControl, ReentrancyGuard {
     // --- Agency staking ---
 
     function stakeAgency(uint256 amount) external nonReentrant {
-        usdc.transferFrom(msg.sender, address(this), amount);
         agencyStakes[msg.sender] += amount;
+        usdc.transferFrom(msg.sender, address(this), amount);
         emit StakeDeposited(msg.sender, amount);
     }
 
@@ -105,8 +105,8 @@ contract EscrowVault is AccessControl, ReentrancyGuard {
     // Agent calls this to route its fee cut back into an agency's stake.
     // Agent must approve this vault to spend the amount before calling.
     function replenishStake(address agency, uint256 amount) external onlyRole(AGENT_ROLE) nonReentrant {
-        usdc.transferFrom(msg.sender, address(this), amount);
         agencyStakes[agency] += amount;
+        usdc.transferFrom(msg.sender, address(this), amount);
         emit StakeReplenished(agency, amount);
     }
 }

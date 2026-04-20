@@ -119,7 +119,7 @@ export default function PublisherPage() {
             <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6">
               <h2 className="font-semibold text-[#f5f0eb] mb-1">Get Test USDC</h2>
               <p className="text-sm text-[#6b6259] mb-4">
-                Mint yourself 100 MockUSDC on Sepolia testnet to use for deposits.
+                Mint yourself 100 MockUSDC on BNB Testnet to use for deposits.
               </p>
               <button
                 disabled={isMinting || !USDC_ADDRESS}
@@ -237,7 +237,12 @@ export default function PublisherPage() {
                         </td>
                         <td className="px-4 py-3">
                           {l.txHash && (
-                            <a href={`https://sepolia.etherscan.io/tx/${l.txHash}`} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-400/60 hover:text-orange-400 transition-colors">
+                            <a
+                              href={`https://testnet.bscscan.com/tx/${l.txHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-orange-400/60 hover:text-orange-400 transition-colors"
+                            >
                               View ↗
                             </a>
                           )}
