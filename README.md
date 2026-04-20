@@ -1,5 +1,7 @@
 # Eye:Witness
 
+[Created for BNB Hack]
+
 Blockchain photo provenance registry with autonomous DMCA enforcement on BNB Smart Chain.
 
 Photographers register photos on-chain. An AI agent crawls the web, detects unlicensed usage, auto-pays licenses via USDC, and escalates to DMCA takedowns for infringers who won't pay.
