@@ -19,7 +19,6 @@ function getContract(): ethers.Contract {
   if (contract) return contract
 
   const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL
-  const fallbackUrl = process.env.FALLBACK_RPC_URL
   const contractAddress = process.env.NEXT_PUBLIC_PHOTO_REGISTRY_ADDRESS
 
   if (!rpcUrl || !contractAddress) {
@@ -45,7 +44,8 @@ export async function syncRegisteredPhotos(): Promise<void> {
   const latestBlock = await provider.getBlockNumber()
 
   const lastSynced = getLastSyncedBlock()
-  const fromBlock = lastSynced ?? Math.max(0, latestBlock - 50)
+  const deployBlock = process.env.REGISTRY_DEPLOY_BLOCK ? parseInt(process.env.REGISTRY_DEPLOY_BLOCK, 10) : null
+  const fromBlock = lastSynced ?? deployBlock ?? Math.max(0, latestBlock - 10_000)
 
   let total = 0
   for (let start = fromBlock; start <= latestBlock; start += CHUNK_SIZE) {

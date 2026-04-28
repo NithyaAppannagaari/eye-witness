@@ -122,6 +122,14 @@ export function getBlockedCategory(): DetectionRow[] {
     .all() as DetectionRow[]
 }
 
+export function resetDetectionsForTargets(targets: string[]): void {
+  if (targets.length === 0) return
+  const placeholders = targets.map(() => '?').join(', ')
+  getDb()
+    .prepare(`DELETE FROM detections WHERE pageUrl IN (${placeholders})`)
+    .run(targets)
+}
+
 export function upsertRegisteredPhoto(photo: RegisteredPhoto): void {
   getDb().prepare(`
     INSERT INTO registered_photos (photoHash, owner, timestamp, pHash)
