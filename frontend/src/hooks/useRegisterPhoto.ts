@@ -17,6 +17,8 @@ function decodeRegisterError(err: unknown): string {
     return "This photo is already registered on-chain. Use a different photo.";
   if (msg.includes("User rejected") || msg.includes("user rejected"))
     return "Transaction cancelled.";
+  if (msg.toLowerCase().includes("execution reverted") || msg.includes("unknown reason"))
+    return "Transaction reverted — this photo may already be registered. Try a different photo.";
   return msg;
 }
 
@@ -25,7 +27,7 @@ export function useRegisterPhoto() {
 
   const { mutate: writeContract, data: txHash, isPending, error } = useWriteContract();
 
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+  const { isLoading: isConfirming, isSuccess, error: receiptError } = useWaitForTransactionReceipt({
     hash: txHash,
   });
 
@@ -57,7 +59,9 @@ export function useRegisterPhoto() {
     });
   }
 
-  const decodedError = error ? new Error(decodeRegisterError(error)) : null;
+  const decodedError = error ? new Error(decodeRegisterError(error))
+    : receiptError ? new Error(decodeRegisterError(receiptError))
+    : null;
 
   return { register, txHash, isPending, isConfirming, isSuccess, error: decodedError };
 }
