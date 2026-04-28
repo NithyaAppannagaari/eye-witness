@@ -6,8 +6,8 @@ import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || "";
-const BSC_TESTNET_RPC = process.env.NEXT_PUBLIC_BASE_RPC_URL || "https://data-seed-prebsc-1-s1.bnbchain.org:8545";
-const BSCSCAN_API_KEY = process.env.BSCSCAN_API_KEY || "";
+const SEPOLIA_RPC = process.env.NEXT_PUBLIC_BASE_RPC_URL || "https://ethereum-sepolia-rpc.publicnode.com";
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "";
 
 const config: HardhatUserConfig = {
   solidity: {
@@ -21,26 +21,16 @@ const config: HardhatUserConfig = {
     hardhat: {},
     ...(DEPLOYER_PRIVATE_KEY
       ? {
-          bscTestnet: {
-            url: BSC_TESTNET_RPC,
+          sepolia: {
+            url: SEPOLIA_RPC,
             accounts: [DEPLOYER_PRIVATE_KEY],
-            chainId: 97,
+            chainId: 11155111,
           },
         }
       : {}),
   },
   etherscan: {
-    apiKey: { bscTestnet: BSCSCAN_API_KEY },
-    customChains: [
-      {
-        network: "bscTestnet",
-        chainId: 97,
-        urls: {
-          apiURL: "https://api-testnet.bscscan.com/api",
-          browserURL: "https://testnet.bscscan.com",
-        },
-      },
-    ],
+    apiKey: ETHERSCAN_API_KEY,
   },
   paths: {
     sources: "./contracts",
