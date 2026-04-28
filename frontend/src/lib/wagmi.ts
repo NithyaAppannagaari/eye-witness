@@ -1,12 +1,12 @@
 import { createConfig, http, injected } from "wagmi";
-import { bscTestnet } from "wagmi/chains";
+import { sepolia } from "wagmi/chains";
 
 const rpcUrl = process.env.NEXT_PUBLIC_BASE_RPC_URL;
 
 export const wagmiConfig = createConfig({
-  chains: [bscTestnet],
+  chains: [sepolia],
   connectors: [injected()],
-  transports: { [bscTestnet.id]: http(rpcUrl) },
+  transports: { [sepolia.id]: http(rpcUrl) },
   ssr: true,
 });
 

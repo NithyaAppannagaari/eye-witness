@@ -40,7 +40,7 @@ export default function RegisterPage() {
       <div className="mx-auto max-w-xl px-4 py-12">
         <h1 className="text-2xl font-bold text-[#f5f0eb] mb-2 tracking-tight">Register a Photo</h1>
         <p className="text-sm text-[#6b6259] mb-8">
-          Commit a timestamped, GPS-verified provenance record on BNB Testnet.
+          Commit a timestamped, GPS-verified provenance record on Sepolia.
         </p>
 
         {!isConnected ? (
@@ -88,7 +88,7 @@ export default function RegisterPage() {
               <p className="text-sm text-[#6b6259] text-center">
                 Tx:{" "}
                 <a
-                  href={`https://testnet.bscscan.com/tx/${txHash}`}
+                  href={`https://sepolia.etherscan.io/tx/${txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-orange-400 underline font-mono hover:text-orange-300 transition-colors"
