@@ -10,7 +10,6 @@ import { startApiServer } from './api'
 import { startListener } from './listener'
 import { startMonitor } from './monitor'
 import { startHealthServer } from './health'
-import { resetDetectionsForTargets } from './db'
 import { logger } from './logger'
 
 const TARGETS_PATH = path.resolve(__dirname, '../targets.json')
@@ -27,9 +26,6 @@ function loadTargets(): string[] {
 
 async function runLoop(): Promise<void> {
   logger.info('[index] Starting detection loop...')
-  const targets = loadTargets()
-  resetDetectionsForTargets(targets)
-  logger.info(`[index] Reset detections for ${targets.length} target(s)`)
 
   startApiServer()
   startListener()
@@ -38,6 +34,7 @@ async function runLoop(): Promise<void> {
 
   const tick = async () => {
     logger.info(`[index] Tick at ${new Date().toISOString()}`)
+    const targets = loadTargets()
     try {
       await syncRegisteredPhotos()
     } catch {
