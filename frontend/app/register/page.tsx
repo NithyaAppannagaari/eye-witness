@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ConnectButton } from "@/components/ConnectButton";
@@ -22,9 +22,11 @@ export default function RegisterPage() {
     blockAiTraining: false,
   });
 
-  if (isSuccess && photoData) {
-    router.push(`/photo/${photoData.imageHash}`);
-  }
+  useEffect(() => {
+    if (isSuccess && photoData) {
+      router.push(`/photo/${photoData.imageHash}`);
+    }
+  }, [isSuccess, photoData, router]);
 
   const canSubmit = isConnected && photoData && !isPending && !isConfirming;
 
