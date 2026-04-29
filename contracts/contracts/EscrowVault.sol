@@ -10,7 +10,6 @@ interface ILicenseEngine {
         bytes32 photoId,
         address publisher,
         address photographer,
-        address agentWallet,
         string calldata useType,
         uint256 amount,
         string calldata url
@@ -24,24 +23,18 @@ contract EscrowVault is AccessControl, ReentrancyGuard {
     IERC20 public immutable usdc;
 
     mapping(address => uint256) public publisherBalances;
-    mapping(address => uint256) public agencyStakes;
     mapping(string => address) public domainOwners;
 
     event Deposited(address indexed publisher, uint256 amount);
     event Withdrawn(address indexed publisher, uint256 amount);
     event PaymentDrawn(bytes32 indexed photoId, address indexed publisher, string url, uint256 amount);
     event DomainClaimed(string domain, address indexed owner);
-    event StakeDeposited(address indexed agency, uint256 amount);
-    event StakeWithdrawn(address indexed agency, uint256 amount);
-    event StakeReplenished(address indexed agency, uint256 amount);
 
     constructor(address _licenseEngine, address _usdcAddress) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         licenseEngine = ILicenseEngine(_licenseEngine);
         usdc = IERC20(_usdcAddress);
     }
-
-    // --- Publisher escrow ---
 
     function deposit(uint256 amount) external nonReentrant {
         publisherBalances[msg.sender] += amount;
@@ -79,34 +72,9 @@ contract EscrowVault is AccessControl, ReentrancyGuard {
         require(publisherBalances[publisher] >= amount, "Insufficient publisher balance");
         publisherBalances[publisher] -= amount;
 
-        // Approve LicenseEngine to pull exactly `amount` from this vault, then call mintLicense.
-        // LicenseEngine (msg.sender there = this vault) uses transferFrom to split to recipients.
         usdc.approve(address(licenseEngine), amount);
-        licenseEngine.mintLicense(photoId, publisher, photographer, msg.sender, useType, amount, url);
+        licenseEngine.mintLicense(photoId, publisher, photographer, useType, amount, url);
 
         emit PaymentDrawn(photoId, publisher, url, amount);
-    }
-
-    // --- Agency staking ---
-
-    function stakeAgency(uint256 amount) external nonReentrant {
-        agencyStakes[msg.sender] += amount;
-        usdc.transferFrom(msg.sender, address(this), amount);
-        emit StakeDeposited(msg.sender, amount);
-    }
-
-    function withdrawStake(uint256 amount) external nonReentrant {
-        require(agencyStakes[msg.sender] >= amount, "Insufficient stake");
-        agencyStakes[msg.sender] -= amount;
-        usdc.transfer(msg.sender, amount);
-        emit StakeWithdrawn(msg.sender, amount);
-    }
-
-    // Agent calls this to route its fee cut back into an agency's stake.
-    // Agent must approve this vault to spend the amount before calling.
-    function replenishStake(address agency, uint256 amount) external onlyRole(AGENT_ROLE) nonReentrant {
-        agencyStakes[agency] += amount;
-        usdc.transferFrom(msg.sender, address(this), amount);
-        emit StakeReplenished(agency, amount);
     }
 }

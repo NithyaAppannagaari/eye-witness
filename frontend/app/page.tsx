@@ -6,11 +6,11 @@ import { useEffect } from "react";
 const TICKER = [
   "Perceptual hash matching",
   "On-chain provenance",
-  "Autonomous DMCA filing",
+  "Automated DMCA filing",
   "ERC-1155 license tokens",
-  "Agency staking",
   "Automatic USDC payouts",
-  "Real-time dispute resolution",
+  "Publisher escrow",
+  "Real-time detection",
   "Ethereum Sepolia",
 ];
 
@@ -33,7 +33,6 @@ export default function Home() {
         </div>
         <div className="hidden md:flex items-center gap-7">
           <a href="#how" className="text-sm text-[#a89f96] hover:text-[#f5f0eb] transition-colors">How it works</a>
-          <a href="#roles" className="text-sm text-[#a89f96] hover:text-[#f5f0eb] transition-colors">For agencies</a>
           <a href="#roles" className="text-sm text-[#a89f96] hover:text-[#f5f0eb] transition-colors">Pricing</a>
         </div>
         <Link
@@ -51,7 +50,6 @@ export default function Home() {
           <div className="absolute w-[520px] h-[520px] rounded-full -top-32 -left-24 bg-[#c2410c] opacity-[0.13] blur-[90px]" />
           <div className="absolute w-[420px] h-[420px] rounded-full -bottom-20 -right-20 bg-[#7c2d12] opacity-[0.12] blur-[90px]" />
           <div className="absolute w-[360px] h-[360px] rounded-full top-[35%] left-1/2 -translate-x-1/2 bg-[#ea580c] opacity-[0.08] blur-[80px]" />
-          {/* Spinning rings — wrapper for position, inner for rotation */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[720px] h-[720px]">
             <div className="w-full h-full rounded-full border border-white/[0.04] ew-spin-slow" />
           </div>
@@ -61,11 +59,9 @@ export default function Home() {
         </div>
 
         {/* Badge */}
-        <div
-          className="relative inline-flex items-center gap-2.5 bg-white/[0.05] border border-white/[0.1] rounded-full px-4 py-1.5 text-xs text-[#a89f96] mb-7 ew-fadein"
-        >
+        <div className="relative inline-flex items-center gap-2.5 bg-white/[0.05] border border-white/[0.1] rounded-full px-4 py-1.5 text-xs text-[#a89f96] mb-7 ew-fadein">
           <span className="w-2 h-2 rounded-full bg-orange-500 ew-pulse-ring" />
-          AI-powered photo rights enforcement
+          Autonomous photo rights enforcement
         </div>
 
         {/* Headline */}
@@ -149,10 +145,10 @@ export default function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-white/[0.07] border border-white/[0.07] rounded-2xl overflow-hidden ew-fade">
             {[
-              { step: "01", icon: "📷", title: "Register your photo", desc: "Upload a photo — we extract timestamp and GPS from EXIF, compute image + metadata hashes, and commit both on-chain with your wallet and license rules." },
-              { step: "02", icon: "🔍", title: "Agent crawls the web", desc: "Our autonomous agent runs 24/7 — crawling pages, extracting images, and computing perceptual hashes to find your photo even if resized or lightly edited." },
-              { step: "03", icon: "🔒", title: "Provenance verified", desc: "On a match, the agent recomputes the metadata hash from the found image's EXIF and checks it against the on-chain record. Tampered copies fail this check." },
-              { step: "04", icon: "⚡", title: "Payment or enforcement", desc: "Cooperative publishers pay automatically from escrow. Unknown infringers get an instant DMCA takedown — resolved by paying on-chain for their license." },
+              { step: "01", icon: "📷", title: "Register your photo", desc: "Upload a photo — we extract timestamp and GPS from EXIF, compute image + metadata hashes, and commit both on-chain with your wallet and license prices." },
+              { step: "02", icon: "🔍", title: "Agent crawls the web", desc: "The autonomous agent runs 24/7 — visiting pages, extracting images, and computing perceptual hashes to find your photo even if resized or compressed." },
+              { step: "03", icon: "🔒", title: "Provenance verified", desc: "On a match, the agent re-extracts EXIF from the found image and recomputes the metadata hash. It must match the on-chain record — tampered copies fail." },
+              { step: "04", icon: "⚡", title: "Payment or enforcement", desc: "Publishers with escrow are charged automatically — USDC hits your wallet. All others receive an instant DMCA takedown notice, resolved by paying on-chain." },
             ].map((card) => (
               <div key={card.step} className="bg-[#0c0a08] p-8 hover:bg-[#131009] transition-colors">
                 <div className="text-[11px] font-bold text-orange-500 tracking-widest uppercase mb-5">Step {card.step}</div>
@@ -181,9 +177,9 @@ export default function Home() {
               <ul className="space-y-3.5">
                 {[
                   "Perceptual hashing matches crops, resizes, and edits — not just exact copies",
-                  "Double verification: pHash match + metadata hash provenance check",
-                  "LLM classifier determines editorial, commercial, or AI training use",
-                  "Agent self-funds from its cut of every successful detection",
+                  "Double verification: pHash match + metadata hash provenance check against EXIF",
+                  "Automatic use-type detection: editorial, commercial, or AI training",
+                  "No external AI dependencies — runs standalone with zero setup",
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-[#a89f96] leading-relaxed">
                     <span className="mt-0.5 w-5 h-5 rounded-full bg-orange-500/[0.1] border border-orange-500/[0.25] flex items-center justify-center flex-shrink-0">
@@ -208,9 +204,8 @@ export default function Home() {
                   { time: "09:14:24", msg: <><span className="text-emerald-400">MATCH</span> — img_3 distance=4 (threshold 10)</> },
                   { time: "09:14:24", msg: <>verifying metadata hash <span className="text-sky-400">on-chain...</span></> },
                   { time: "09:14:25", msg: <><span className="text-emerald-400">VERIFIED</span> — provenance confirmed</> },
-                  { time: "09:14:25", msg: <>classifying use type: <span className="text-orange-400">editorial</span></> },
-                  { time: "09:14:26", msg: <><span className="text-emerald-400">PAID</span> — $0.003 → 0xF3a2...8B1c</> },
-                  { time: "09:14:26", msg: <><span className="text-sky-400">LICENSE</span> token minted, ERC-1155 #0x3f7a</> },
+                  { time: "09:14:25", msg: <>publisher escrow found: <span className="text-orange-400">$12.50</span></> },
+                  { time: "09:14:26", msg: <><span className="text-emerald-400">PAID</span> — $1.00 → 0xF3a2...8B1c</> },
                 ].map((line, i) => (
                   <div key={i} className="flex gap-3 text-[#6b6259]">
                     <span className="shrink-0">{line.time}</span>
@@ -230,7 +225,7 @@ export default function Home() {
                 {[
                   { dot: "bg-orange-500", label: "randomsite.com/hero.jpg", badge: "Match", bc: "text-orange-400 bg-orange-500/[0.1] border-orange-500/20" },
                   { dot: "bg-[#3a3530]", label: "metadata hash check", badge: "Verified", bc: "text-sky-400 bg-sky-500/[0.1] border-sky-500/20" },
-                  { dot: "bg-[#3a3530]", label: "escrow balance: $0.00", badge: "Dispute", bc: "text-violet-400 bg-violet-500/[0.1] border-violet-500/20" },
+                  { dot: "bg-[#3a3530]", label: "escrow balance: $0.00", badge: "No escrow", bc: "text-violet-400 bg-violet-500/[0.1] border-violet-500/20" },
                   { dot: "bg-orange-500", label: "DMCA → cloudflare.com", badge: "Sent", bc: "text-violet-400 bg-violet-500/[0.1] border-violet-500/20" },
                 ].map((row, i) => (
                   <div key={i} className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-2.5">
@@ -242,8 +237,8 @@ export default function Home() {
                 <div className="h-px bg-white/[0.06] my-1" />
                 <div className="text-[11px] text-[#6b6259] font-mono mb-2">RESOLUTION</div>
                 {[
-                  { label: "on-chain payment received", badge: "$0.05" },
-                  { label: "license minted, DMCA withdrawn", badge: "Resolved" },
+                  { label: "publisher deposits escrow + claims domain", badge: "Setup" },
+                  { label: "on-chain payment executed automatically", badge: "$1.00" },
                 ].map((row, i) => (
                   <div key={i} className="flex items-center gap-3 bg-white/[0.03] border border-white/[0.06] rounded-lg px-4 py-2.5">
                     <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
@@ -263,9 +258,9 @@ export default function Home() {
               <ul className="space-y-3.5">
                 {[
                   "DMCA takedown filed to hosting provider automatically — no lawyer needed",
-                  "On-chain dispute record serves as immutable legal evidence",
-                  "Violator resolves by paying on-chain — DMCA withdrawn automatically",
-                  "Pay the chain, get the license, keep your site up",
+                  "On-chain license record serves as immutable legal evidence",
+                  "Publishers resolve by depositing escrow and claiming their domain",
+                  "Next crawl cycle auto-pays — DMCA resolved without manual intervention",
                 ].map((item, i) => (
                   <li key={i} className="flex items-start gap-3 text-sm text-[#a89f96] leading-relaxed">
                     <span className="mt-0.5 w-5 h-5 rounded-full bg-orange-500/[0.1] border border-orange-500/[0.25] flex items-center justify-center flex-shrink-0">
@@ -293,21 +288,14 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 ew-fade">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 max-w-2xl mx-auto ew-fade">
             {[
               {
                 tag: "Photographer", title: "Creator", href: "/dashboard/photographer",
-                featured: false, amount: "$0", sub: "/setup",
+                featured: true, amount: "$0", sub: "/setup",
                 desc: "Register photos once. Earn on every detected use.",
-                features: ["Unlimited photo registration", "Public provenance page", "Real-time payment dashboard", "85% of every license fee", "Dispute notifications"],
+                features: ["Unlimited photo registration", "Public provenance page", "Real-time payment dashboard", "85% of every license fee", "DMCA enforcement notifications"],
                 cta: "Open Dashboard",
-              },
-              {
-                tag: "Agency", title: "Agency", href: "/dashboard/agency",
-                featured: true, amount: "Stake", sub: " USDC",
-                desc: "Fund detection across your portfolio. Replenishes automatically.",
-                features: ["Portfolio management", "Bulk photo registration", "Auto-replenishing stake", "ROI dashboard", "Agency-level dispute log"],
-                cta: "Get Started",
               },
               {
                 tag: "Publisher", title: "Publisher", href: "/publisher",

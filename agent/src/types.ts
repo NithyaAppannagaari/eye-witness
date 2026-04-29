@@ -5,12 +5,8 @@ export type DetectionStatus =
   | 'already_licensed'
   | 'verified'
   | 'unverifiable'
-  | 'classified'
-  | 'blocked_category'
   | 'paid'
-  | 'awaiting_enforcement'
   | 'dmca_sent'
-  | 'resolved'
 
 export interface DetectionRow {
   id: number

@@ -7,19 +7,15 @@ import {
   checkLicense,
 } from './registry'
 import { verifyProvenance } from './verify'
-import { classifyUse } from './classifier'
+import { classifyUseByUrl } from './classifier'
 import {
   getPendingDetections,
   getMatchedDetections,
   getVerifiedDetections,
-  getClassifiedDetections,
-  getAwaitingEnforcement,
-  getBlockedCategory,
   updateDetection,
 } from './db'
 import { getPublisherForDomain, getPublisherBalance, executePayment } from './payment'
-import { identifyHost, generateNotice, sendNotice } from './dmca'
-import { logDisputeOnChain } from './dispute'
+import { identifyHost, getSiteOwnerEmails, generateNotice, sendNotice } from './dmca'
 import { logger } from './logger'
 
 export async function processPending(): Promise<void> {
@@ -46,7 +42,7 @@ export async function processPending(): Promise<void> {
             updateDetection(row.id, { status: 'already_licensed', matchedPhotoHash: imageHash, ownerWallet: photo.owner })
             continue
           }
-          // Exact SHA-256 match = same bytes = provenance implicitly verified, skip metadata re-check
+          // Exact SHA-256 match = provenance implicitly verified, skip EXIF re-check
           updateDetection(row.id, { status: 'verified', matchedPhotoHash: imageHash, ownerWallet: photo.owner })
         }
       }
@@ -94,92 +90,75 @@ export async function processMatched(): Promise<void> {
 export async function processVerified(): Promise<void> {
   const rows = getVerifiedDetections()
   if (rows.length === 0) return
-  logger.info(`[pipeline] Classifying ${rows.length} verified detections`)
+  logger.info(`[pipeline] Processing ${rows.length} verified detections`)
 
   for (const row of rows) {
-    if (!row.matchedPhotoHash) continue
-    try {
-      const pageRes = await fetch(row.pageUrl, { signal: AbortSignal.timeout(10_000) })
-      const pageHtml = pageRes.ok ? await pageRes.text() : ''
-      const { useType, confidence } = await classifyUse(pageHtml)
-      logger.info(`[pipeline] ${row.imageUrl} → ${useType} (${confidence.toFixed(2)})`)
+    if (!row.matchedPhotoHash || !row.ownerWallet) continue
 
+    // Classify use type by URL (no external dependency)
+    const useType = classifyUseByUrl(row.pageUrl)
+
+    // Determine license price from on-chain rules
+    let licensePrice: bigint | null = null
+    try {
       const rules = await getLicenseRules(row.matchedPhotoHash)
       const priceMap: Record<string, bigint | null> = {
         editorial: rules?.editorialPrice ?? null,
         commercial: rules?.commercialPrice ?? null,
         ai_training: rules?.aiTrainingPrice ?? null,
       }
-      const licensePrice = priceMap[useType] ?? null
-      const isBlocked = useType === 'ai_training' && (rules?.blockAiTraining ?? false)
-      updateDetection(row.id, { useType, licensePrice, status: isBlocked ? 'blocked_category' : 'classified' })
+      licensePrice = priceMap[useType] ?? null
     } catch (err) {
-      logger.warn({ err }, `[pipeline] Classification failed for ${row.imageUrl}`)
+      logger.warn({ err }, `[pipeline] Could not fetch license rules for ${row.matchedPhotoHash}`)
     }
-  }
-}
 
-export async function processClassified(): Promise<void> {
-  const rows = getClassifiedDetections()
-  if (rows.length === 0) return
-  logger.info(`[pipeline] Processing ${rows.length} classified detections for payment`)
+    updateDetection(row.id, { useType, licensePrice })
 
-  for (const row of rows) {
-    if (!row.matchedPhotoHash || !row.ownerWallet || !row.licensePrice || !row.useType) {
-      updateDetection(row.id, { status: 'awaiting_enforcement' })
-      continue
-    }
-    try {
-      const domain = new URL(row.pageUrl).hostname
-      const publisherAddress = await getPublisherForDomain(domain)
-      if (!publisherAddress) {
-        updateDetection(row.id, { status: 'awaiting_enforcement' })
-        continue
+    // Attempt automatic payment if publisher has escrow
+    if (licensePrice) {
+      try {
+        const domain = new URL(row.pageUrl).hostname
+        const publisherAddress = await getPublisherForDomain(domain)
+        if (publisherAddress) {
+          const balance = await getPublisherBalance(publisherAddress)
+          if (balance >= licensePrice) {
+            const txHash = await executePayment(publisherAddress, row.matchedPhotoHash, licensePrice, row.pageUrl, row.ownerWallet, useType)
+            logger.info(`[pipeline] Paid — tx: ${txHash}`)
+            updateDetection(row.id, { status: 'paid', txHash, publisherAddress })
+            continue
+          }
+        }
+      } catch (err) {
+        logger.warn({ err }, `[pipeline] Payment failed for detection ${row.id}`)
       }
-      const price = BigInt(row.licensePrice)
-      const balance = await getPublisherBalance(publisherAddress)
-      if (balance < price) {
-        updateDetection(row.id, { status: 'awaiting_enforcement' })
-        continue
-      }
-      const txHash = await executePayment(publisherAddress, row.matchedPhotoHash, price, row.pageUrl, row.ownerWallet, row.useType)
-      logger.info(`[pipeline] Paid — tx: ${txHash}`)
-      updateDetection(row.id, { status: 'paid', txHash, publisherAddress })
-    } catch (err) {
-      logger.warn({ err }, `[pipeline] Payment failed for detection ${row.id}`)
     }
-  }
-}
 
-export async function processEnforcement(): Promise<void> {
-  const rows = [...getAwaitingEnforcement(), ...getBlockedCategory()]
-  if (rows.length === 0) return
-  logger.info(`[pipeline] Processing ${rows.length} rows for enforcement`)
-
-  for (const row of rows) {
-    if (!row.matchedPhotoHash || !row.ownerWallet) continue
+    // Fallback: DMCA takedown — always sends; no domain claim required
     try {
-      const disputeId = await logDisputeOnChain(row.matchedPhotoHash, row.pageUrl, row.imageUrl)
-      updateDetection(row.id, { disputeId })
-      logger.info(`[pipeline] Logged dispute ${disputeId} for detection ${row.id}`)
-
       const hostname = new URL(row.pageUrl).hostname
-      const dmcaEmail = identifyHost(hostname)
+      const encodedUrl = encodeURIComponent(row.pageUrl)
+      const licenseUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/license/${row.matchedPhotoHash}?url=${encodedUrl}&use=${useType}`
+
+      // Site-owner emails derived from the hostname (works for any site)
+      const siteEmails = getSiteOwnerEmails(hostname)
+      // Also include the hosting-provider abuse contact if known
+      const hostEmail = identifyHost(hostname)
+      const allEmails = hostEmail ? [...siteEmails, hostEmail] : siteEmails
+
       const notice = generateNotice({
         photoHash: row.matchedPhotoHash,
         pageUrl: row.pageUrl,
         ownerWallet: row.ownerWallet,
-        useType: row.useType ?? 'unknown',
+        useType,
+        licenseUrl,
       })
-      if (dmcaEmail) {
-        await sendNotice(dmcaEmail, notice, row.matchedPhotoHash)
-        updateDetection(row.id, { status: 'dmca_sent', dmcaSentAt: new Date().toISOString(), dmcaEmail })
-      } else {
-        logger.info(`[pipeline] No DMCA contact for ${hostname}`)
-        updateDetection(row.id, { status: 'dmca_sent', dmcaSentAt: new Date().toISOString() })
-      }
+
+      await sendNotice(allEmails, notice, row.matchedPhotoHash)
+      const primaryEmail = allEmails[0]
+      logger.info(`[pipeline] DMCA sent to ${allEmails.length} addresses for ${row.pageUrl}`)
+      updateDetection(row.id, { status: 'dmca_sent', dmcaSentAt: new Date().toISOString(), dmcaEmail: primaryEmail })
     } catch (err) {
-      logger.warn({ err }, `[pipeline] Enforcement failed for detection ${row.id}`)
+      logger.warn({ err }, `[pipeline] DMCA failed for detection ${row.id}`)
     }
   }
 }

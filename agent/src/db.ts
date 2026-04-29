@@ -49,7 +49,6 @@ function initSchema() {
     );
   `)
 
-  // Migrate existing tables — ALTER TABLE ignores "already exists" errors
   for (const col of ['dmcaSentAt TEXT', 'resolvedAt TEXT', 'dmcaEmail TEXT']) {
     try { getDb().exec(`ALTER TABLE detections ADD COLUMN ${col}`) } catch { /* already exists */ }
   }
@@ -102,32 +101,6 @@ export function getVerifiedDetections(): DetectionRow[] {
   return getDb()
     .prepare("SELECT * FROM detections WHERE status = 'verified'")
     .all() as DetectionRow[]
-}
-
-export function getClassifiedDetections(): DetectionRow[] {
-  return getDb()
-    .prepare("SELECT * FROM detections WHERE status = 'classified'")
-    .all() as DetectionRow[]
-}
-
-export function getAwaitingEnforcement(): DetectionRow[] {
-  return getDb()
-    .prepare("SELECT * FROM detections WHERE status = 'awaiting_enforcement'")
-    .all() as DetectionRow[]
-}
-
-export function getBlockedCategory(): DetectionRow[] {
-  return getDb()
-    .prepare("SELECT * FROM detections WHERE status = 'blocked_category'")
-    .all() as DetectionRow[]
-}
-
-export function resetDetectionsForTargets(targets: string[]): void {
-  if (targets.length === 0) return
-  const placeholders = targets.map(() => '?').join(', ')
-  getDb()
-    .prepare(`DELETE FROM detections WHERE pageUrl IN (${placeholders})`)
-    .run(targets)
 }
 
 export function upsertRegisteredPhoto(photo: RegisteredPhoto): void {
