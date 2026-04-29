@@ -2,14 +2,15 @@
 
 import Link from "next/link";
 import { ConnectButton } from "@/components/ConnectButton";
-import { useConnection, useWatchContractEvent } from "wagmi";
+import { useConnection, useWatchContractEvent, usePublicClient } from "wagmi";
 import { useState, useEffect } from "react";
-import { formatUnits } from "viem";
+import { formatUnits, parseAbiItem } from "viem";
 import PhotoRegistryABI from "@/abi/PhotoRegistry.json";
-import LicenseEngineABI from "@/abi/LicenseEngine.json";
 
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_PHOTO_REGISTRY_ADDRESS as `0x${string}` | undefined;
-const LICENSE_ENGINE_ADDRESS = process.env.NEXT_PUBLIC_LICENSE_ENGINE_ADDRESS as `0x${string}` | undefined;
+const DEPLOY_BLOCK = process.env.NEXT_PUBLIC_REGISTRY_DEPLOY_BLOCK
+  ? BigInt(process.env.NEXT_PUBLIC_REGISTRY_DEPLOY_BLOCK)
+  : 0n;
 const AGENT_API = "http://localhost:3001";
 
 interface Registration {
@@ -23,6 +24,7 @@ interface Detection {
   id: number;
   pageUrl: string;
   imageUrl: string;
+  matchedPhotoHash: string | null;
   status: string;
   useType: string | null;
   licensePrice: string | null;
@@ -33,23 +35,20 @@ interface Dispute {
   id: number;
   pageUrl: string;
   imageUrl: string;
-  matchedPhotoHash: string | null;
   useType: string | null;
-  disputeId: number | null;
   status: string;
   dmcaSentAt: string | null;
-  resolvedAt: string | null;
-  dmcaEmail: string | null;
   createdAt: string;
+  dmcaEmail: string | null;
 }
 
-type Tab = "photos" | "disputes";
+type Tab = "photos" | "disputes" | "targets";
 
-function disputeStatusBadge(status: string) {
-  if (status === "resolved") {
+function statusBadge(status: string) {
+  if (status === "paid") {
     return (
       <span className="inline-flex items-center rounded-full bg-emerald-500/[0.1] border border-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-400">
-        RESOLVED
+        PAID
       </span>
     );
   }
@@ -69,20 +68,59 @@ function disputeStatusBadge(status: string) {
 
 export default function PhotographerDashboard() {
   const { address, isConnected } = useConnection();
+  const publicClient = usePublicClient();
   const [tab, setTab] = useState<Tab>("photos");
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [usdcEarned, setUsdcEarned] = useState(0n);
   const [detections, setDetections] = useState<Detection[]>([]);
   const [disputes, setDisputes] = useState<Dispute[]>([]);
-  const [detectionsByPhoto, setDetectionsByPhoto] = useState<Map<string, number>>(new Map());
+  const [targets, setTargets] = useState<string[]>([]);
+  const [newTarget, setNewTarget] = useState("");
+  const [targetError, setTargetError] = useState("");
+  const [agentOnline, setAgentOnline] = useState(false);
 
+  // Fetch historical PhotoRegistered events on mount — live watcher alone loses data on navigation.
+  useEffect(() => {
+    if (!address || !CONTRACT_ADDRESS || !publicClient) return;
+    let cancelled = false;
+    const fetchHistorical = async () => {
+      try {
+        // Use deploy block if set; otherwise fall back to recent 100k blocks to stay within Alchemy's range limit.
+        const fromBlock = DEPLOY_BLOCK > 0n
+          ? DEPLOY_BLOCK
+          : (await publicClient.getBlockNumber()) - 100_000n;
+        const logs = await publicClient.getLogs({
+          address: CONTRACT_ADDRESS,
+          event: parseAbiItem("event PhotoRegistered(bytes32 indexed photoHash, address indexed owner, uint256 timestamp)"),
+          args: { owner: address },
+          fromBlock,
+          toBlock: "latest",
+        });
+        if (cancelled) return;
+        setRegistrations(
+          logs.map((log) => ({
+            photoHash: log.args.photoHash as string,
+            owner: log.args.owner as string,
+            timestamp: log.args.timestamp as bigint,
+            txHash: log.transactionHash ?? undefined,
+          }))
+        );
+      } catch (err) {
+        console.warn("[dashboard] Failed to fetch historical registrations:", err);
+      }
+    };
+    fetchHistorical();
+    return () => { cancelled = true; };
+  }, [address, publicClient]);
+
+  // Watch for new registrations while the page is open.
   useWatchContractEvent({
     address: CONTRACT_ADDRESS,
     abi: PhotoRegistryABI.abi,
     eventName: "PhotoRegistered",
     onLogs(logs) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const relevant = (logs as any[])
+      const incoming = (logs as any[])
         .filter((log) => log.args?.owner?.toLowerCase() === address?.toLowerCase())
         .map((log) => ({
           photoHash: log.args.photoHash as string,
@@ -92,33 +130,13 @@ export default function PhotographerDashboard() {
         }));
       setRegistrations((prev) => {
         const existing = new Set(prev.map((r) => r.photoHash));
-        return [...prev, ...relevant.filter((r) => !existing.has(r.photoHash))];
+        return [...prev, ...incoming.filter((r) => !existing.has(r.photoHash))];
       });
     },
     enabled: !!CONTRACT_ADDRESS && isConnected,
   });
 
-  useWatchContractEvent({
-    address: LICENSE_ENGINE_ADDRESS,
-    abi: LicenseEngineABI.abi,
-    eventName: "LicenseMinted",
-    onLogs(logs) {
-      const myHashes = new Set(registrations.map((r) => r.photoHash.toLowerCase()));
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (logs as any[]).forEach((log) => {
-        const photoId = (log.args?.photoId as string)?.toLowerCase();
-        if (myHashes.has(photoId)) {
-          setDetectionsByPhoto((prev) => {
-            const updated = new Map(prev);
-            updated.set(photoId, (updated.get(photoId) ?? 0) + 1);
-            return updated;
-          });
-        }
-      });
-    },
-    enabled: !!LICENSE_ENGINE_ADDRESS && isConnected && registrations.length > 0,
-  });
-
+  // Load detections from agent API, poll every 30s.
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
@@ -127,20 +145,20 @@ export default function PhotographerDashboard() {
         const res = await fetch(`${AGENT_API}/api/detections?wallet=${address.toLowerCase()}`);
         if (!res.ok || cancelled) return;
         const rows = await res.json() as Detection[];
-        if (!cancelled) setDetections(rows);
-
-        const paid = rows.filter((r) => r.status === "paid" && r.licensePrice);
-        const total = paid.reduce((acc, r) => acc + BigInt(r.licensePrice!), 0n);
-        if (!cancelled) setUsdcEarned((total * 8000n) / 10000n);
-      } catch {
-        // Agent API not running — silently skip
-      }
+        if (!cancelled) {
+          setDetections(rows);
+          const paid = rows.filter((r) => r.status === "paid" && r.licensePrice);
+          const total = paid.reduce((acc, r) => acc + BigInt(r.licensePrice!), 0n);
+          setUsdcEarned((total * 8500n) / 10_000n);
+        }
+      } catch { /* agent offline — targets poll handles the indicator */ }
     };
     load();
     const interval = setInterval(load, 30_000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [address]);
 
+  // Load disputes from agent API, poll every 30s.
   useEffect(() => {
     if (!address) return;
     let cancelled = false;
@@ -150,24 +168,81 @@ export default function PhotographerDashboard() {
         if (!res.ok || cancelled) return;
         const rows = await res.json() as Dispute[];
         if (!cancelled) setDisputes(rows);
-      } catch {
-        // Agent API not running — silently skip
-      }
+      } catch { /* agent not running — silent */ }
     };
     load();
     const interval = setInterval(load, 30_000);
     return () => { cancelled = true; clearInterval(interval); };
   }, [address]);
 
+  // Poll agent health via /api/targets — works without wallet connection.
+  useEffect(() => {
+    let cancelled = false;
+    const check = async () => {
+      try {
+        const res = await fetch(`${AGENT_API}/api/targets`);
+        if (cancelled) return;
+        if (res.ok) {
+          setAgentOnline(true);
+          setTargets(await res.json() as string[]);
+        } else {
+          setAgentOnline(false);
+        }
+      } catch {
+        if (!cancelled) setAgentOnline(false);
+      }
+    };
+    check();
+    const interval = setInterval(check, 15_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
+
   useEffect(() => {
     setRegistrations([]);
     setUsdcEarned(0n);
     setDetections([]);
     setDisputes([]);
-    setDetectionsByPhoto(new Map());
   }, [address]);
 
-  const totalDetections = detections.length;
+  const addTarget = async () => {
+    setTargetError("");
+    const url = newTarget.trim();
+    if (!url) return;
+    try {
+      const res = await fetch(`${AGENT_API}/api/targets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json() as { ok?: boolean; targets?: string[]; error?: string };
+      if (!res.ok) { setTargetError(data.error ?? "Failed to add target"); return; }
+      setTargets(data.targets ?? []);
+      setNewTarget("");
+    } catch {
+      setTargetError("Agent is not running — start the agent first");
+    }
+  };
+
+  const removeTarget = async (url: string) => {
+    try {
+      const res = await fetch(`${AGENT_API}/api/targets`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json() as { targets?: string[] };
+      if (res.ok) setTargets(data.targets ?? []);
+    } catch { /* agent offline */ }
+  };
+
+  // Count detections per photo from agent API data.
+  const detectionsByPhoto = new Map<string, number>();
+  for (const d of detections) {
+    if (d.matchedPhotoHash && (d.status === "paid" || d.status === "dmca_sent")) {
+      const key = d.matchedPhotoHash.toLowerCase();
+      detectionsByPhoto.set(key, (detectionsByPhoto.get(key) ?? 0) + 1);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#0a0806]">
@@ -180,7 +255,13 @@ export default function PhotographerDashboard() {
 
       <div className="mx-auto max-w-4xl px-4 py-12">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-2xl font-bold text-[#f5f0eb] tracking-tight">Photographer Dashboard</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-[#f5f0eb] tracking-tight">Photographer Dashboard</h1>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className={`w-1.5 h-1.5 rounded-full ${agentOnline ? "bg-emerald-500" : "bg-[#3a3530]"}`} />
+              <span className="text-xs text-[#6b6259]">{agentOnline ? "Agent online" : "Agent offline"}</span>
+            </div>
+          </div>
           <Link
             href="/register"
             className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 transition-colors"
@@ -199,10 +280,9 @@ export default function PhotographerDashboard() {
             <div className="grid grid-cols-3 gap-4 mb-7">
               <StatCard label="Photos Registered" value={registrations.length} />
               <StatCard label="USDC Earned" value={`$${formatUnits(usdcEarned, 6)}`} />
-              <StatCard label="Detections" value={totalDetections} />
+              <StatCard label="Detections" value={detections.length} />
             </div>
 
-            {/* Tab switcher */}
             <div className="flex gap-1 mb-5 border-b border-white/[0.07]">
               <TabButton active={tab === "photos"} onClick={() => setTab("photos")}>
                 Registered Photos
@@ -215,13 +295,19 @@ export default function PhotographerDashboard() {
                   </span>
                 )}
               </TabButton>
+              <TabButton active={tab === "targets"} onClick={() => setTab("targets")}>
+                Crawl Targets
+                <span className="ml-2 rounded-full bg-white/[0.06] border border-white/[0.1] px-1.5 py-0.5 text-xs font-medium text-[#6b6259]">
+                  {targets.length}
+                </span>
+              </TabButton>
             </div>
 
             {tab === "photos" && (
               registrations.length === 0 ? (
                 <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-6 py-10 text-center">
-                  <p className="text-[#a89f96] text-sm">No photos registered yet, or events occurred before this session.</p>
-                  <p className="text-[#6b6259] text-xs mt-1">Register a photo and it will appear here in real time.</p>
+                  <p className="text-[#a89f96] text-sm">No photos registered yet.</p>
+                  <p className="text-[#6b6259] text-xs mt-1">Register a photo and it will appear here.</p>
                 </div>
               ) : (
                 <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] overflow-hidden">
@@ -257,7 +343,7 @@ export default function PhotographerDashboard() {
                                 rel="noopener noreferrer"
                                 className="ml-3 text-orange-400/50 hover:text-orange-400 text-xs transition-colors"
                               >
-                                BscScan ↗
+                                Etherscan ↗
                               </a>
                             )}
                           </td>
@@ -273,7 +359,7 @@ export default function PhotographerDashboard() {
               disputes.length === 0 ? (
                 <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-6 py-10 text-center">
                   <p className="text-[#a89f96] text-sm">No enforcement actions yet.</p>
-                  <p className="text-[#6b6259] text-xs mt-1">Disputes appear here when the agent detects unlicensed usage that can&apos;t be auto-paid.</p>
+                  <p className="text-[#6b6259] text-xs mt-1">Disputes appear here when the agent detects unlicensed usage with no publisher escrow.</p>
                 </div>
               ) : (
                 <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] overflow-hidden">
@@ -282,7 +368,6 @@ export default function PhotographerDashboard() {
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Infringing URL</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Use Type</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Dispute #</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Date</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider"></th>
@@ -292,40 +377,26 @@ export default function PhotographerDashboard() {
                       {disputes.map((d) => (
                         <tr key={d.id} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
                           <td className="px-4 py-3 text-xs text-[#a89f96] max-w-xs truncate">
-                            <a
-                              href={d.pageUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="hover:text-[#f5f0eb] transition-colors"
-                            >
+                            <a href={d.pageUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#f5f0eb] transition-colors">
                               {d.pageUrl}
                             </a>
                           </td>
-                          <td className="px-4 py-3 text-xs text-[#a89f96] capitalize">
-                            {d.useType ?? "—"}
-                          </td>
-                          <td className="px-4 py-3 text-xs font-mono text-[#a89f96]">
-                            {d.disputeId != null ? `#${d.disputeId}` : "—"}
-                          </td>
-                          <td className="px-4 py-3">
-                            {disputeStatusBadge(d.status)}
-                          </td>
+                          <td className="px-4 py-3 text-xs text-[#a89f96] capitalize">{d.useType ?? "—"}</td>
+                          <td className="px-4 py-3">{statusBadge(d.status)}</td>
                           <td className="px-4 py-3 text-xs text-[#6b6259]">
                             {d.dmcaSentAt
                               ? new Date(d.dmcaSentAt).toLocaleDateString()
                               : new Date(d.createdAt).toLocaleDateString()}
                           </td>
                           <td className="px-4 py-3">
-                            {d.status !== "resolved" && (
-                              <button
-                                onClick={async () => {
-                                  await fetch(`${AGENT_API}/api/detections/${d.id}/requeue`, { method: "POST" });
-                                }}
-                                className="text-xs text-orange-400/60 hover:text-orange-400 transition-colors"
-                              >
-                                Retry payment →
-                              </button>
-                            )}
+                            <button
+                              onClick={async () => {
+                                await fetch(`${AGENT_API}/api/detections/${d.id}/requeue`, { method: "POST" });
+                              }}
+                              className="text-xs text-orange-400/60 hover:text-orange-400 transition-colors"
+                            >
+                              Retry payment →
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -333,6 +404,69 @@ export default function PhotographerDashboard() {
                   </table>
                 </div>
               )
+            )}
+
+            {tab === "targets" && (
+              <div className="space-y-4">
+                <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] p-6">
+                  <h2 className="font-semibold text-[#f5f0eb] mb-1">Add Crawl Target</h2>
+                  <p className="text-sm text-[#6b6259] mb-4">
+                    URLs the agent will check on every 60-second tick. Add any page or direct image URL where you suspect your photo is being used.
+                  </p>
+                  <div className="flex gap-3">
+                    <input
+                      type="url"
+                      placeholder="https://example.com/article-with-your-photo"
+                      value={newTarget}
+                      onChange={(e) => { setNewTarget(e.target.value); setTargetError(""); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") addTarget(); }}
+                      className="flex-1 rounded-lg border border-white/[0.1] bg-[#0a0806] px-3 py-2 text-sm text-[#f5f0eb] placeholder-[#6b6259] focus:outline-none focus:ring-1 focus:ring-orange-500/40 focus:border-orange-500/40"
+                    />
+                    <button
+                      disabled={!newTarget.trim()}
+                      onClick={addTarget}
+                      className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-600 disabled:opacity-40 transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
+                  {targetError && <p className="mt-2 text-sm text-red-400">{targetError}</p>}
+                </section>
+
+                {targets.length === 0 ? (
+                  <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] px-6 py-10 text-center">
+                    <p className="text-[#a89f96] text-sm">No targets yet.</p>
+                    <p className="text-[#6b6259] text-xs mt-1">Add a URL above and the agent will start checking it on the next tick.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-white/[0.08] bg-[#0d0b08] overflow-hidden">
+                    <div className="px-6 py-3 border-b border-white/[0.07] flex items-center justify-between">
+                      <span className="text-xs text-[#6b6259]">{targets.length} URL{targets.length !== 1 ? "s" : ""} — checked every 60 seconds</span>
+                    </div>
+                    <ul className="divide-y divide-white/[0.05]">
+                      {targets.map((url) => (
+                        <li key={url} className="flex items-center gap-3 px-5 py-3 hover:bg-white/[0.02] transition-colors">
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange-500/60 shrink-0" />
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 text-xs text-[#a89f96] font-mono truncate hover:text-[#f5f0eb] transition-colors"
+                          >
+                            {url}
+                          </a>
+                          <button
+                            onClick={() => removeTarget(url)}
+                            className="text-xs text-[#3a3530] hover:text-red-400 transition-colors shrink-0"
+                          >
+                            Remove
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             )}
           </>
         )}

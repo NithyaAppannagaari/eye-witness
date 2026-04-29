@@ -1,4 +1,6 @@
-import { encodeMetadata } from "@shared/encoding";
+function encodeMetadata(timestamp: string, lat: number, lng: number, wallet: string): Uint8Array {
+  return new TextEncoder().encode(`${timestamp}|${lat}|${lng}|${wallet.toLowerCase()}`)
+}
 
 export async function computeImageHash(buffer: ArrayBuffer): Promise<`0x${string}`> {
   const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);

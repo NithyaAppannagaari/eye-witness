@@ -21,6 +21,19 @@ function loadProviders(): HostingProvider[] {
   }
 }
 
+// Common DMCA/abuse contact prefixes used by most sites.
+const DMCA_PREFIXES = ['dmca', 'copyright', 'legal', 'abuse']
+
+// Returns a list of best-guess contact emails derived directly from the hostname.
+// These work for any site — no pre-registration required.
+export function getSiteOwnerEmails(hostname: string): string[] {
+  // Strip www. prefix for cleaner email addresses
+  const base = hostname.replace(/^www\./, '')
+  return DMCA_PREFIXES.map(prefix => `${prefix}@${base}`)
+}
+
+// Returns the known hosting-provider abuse email if the hostname is a recognized CDN.
+// Used as an additional escalation target alongside site-owner emails.
 export function identifyHost(hostname: string): string | null {
   const providers = loadProviders()
   for (const p of providers) {
@@ -36,9 +49,13 @@ export function generateNotice(params: {
   pageUrl: string
   ownerWallet: string
   useType: string
+  licenseUrl?: string
 }): string {
-  const { photoHash, pageUrl, ownerWallet, useType } = params
+  const { photoHash, pageUrl, ownerWallet, useType, licenseUrl } = params
   const date = new Date().toUTCString()
+  const paySection = licenseUrl
+    ? `\nTo resolve this notice without a takedown, you may purchase a license directly:\n  ${licenseUrl}\n`
+    : ''
   return `DMCA Takedown Notice
 Date: ${date}
 
@@ -53,10 +70,8 @@ Infringing Material:
 Original Work (On-Chain Registration):
   Photo Hash (SHA-256): ${photoHash}
   Owner Wallet: ${ownerWallet}
-  Registry: Ethereum Sepolia — Eye:Witness Protocol (0xFdFE4b312B8f17120C301D1719bB775dB953bD5C)
-
-This photo is registered on-chain with immutable provenance. Automated detection has classified the usage as "${useType}", which is not permitted under the photographer's license terms.
-
+  Registry: Ethereum Sepolia — Eye:Witness Protocol
+${paySection}
 I request that you immediately remove or disable access to the infringing material identified above.
 
 I swear, under penalty of perjury, that the information in this notification is accurate and that I am authorized to act on behalf of the copyright owner.
@@ -91,22 +106,27 @@ On behalf of: ${ownerWallet}
 `
 }
 
-export async function sendNotice(toEmail: string, noticeText: string, photoHash: string): Promise<void> {
+// Sends notice to one or more recipients. Logs only if SendGrid is not configured.
+export async function sendNotice(toEmails: string | string[], noticeText: string, photoHash: string): Promise<void> {
+  const recipients = Array.isArray(toEmails) ? toEmails : [toEmails]
   const apiKey = process.env.SENDGRID_API_KEY
   const fromEmail = process.env.SENDGRID_FROM_EMAIL
 
   if (!apiKey || !fromEmail) {
     console.warn('[dmca] SENDGRID_API_KEY or SENDGRID_FROM_EMAIL not set — logging notice only')
+    console.log(`[dmca] Would send to: ${recipients.join(', ')}`)
     console.log('[dmca] Notice text:\n', noticeText)
     return
   }
 
   sgMail.setApiKey(apiKey)
-  await sgMail.send({
-    to: toEmail,
-    from: fromEmail,
-    subject: `DMCA Takedown Notice — Photo ${photoHash.slice(0, 10)}`,
-    text: noticeText,
-  })
-  console.log(`[dmca] Notice sent to ${toEmail}`)
+  for (const to of recipients) {
+    await sgMail.send({
+      to,
+      from: fromEmail,
+      subject: `DMCA Takedown Notice — Photo ${photoHash.slice(0, 10)}`,
+      text: noticeText,
+    })
+    console.log(`[dmca] Notice sent to ${to}`)
+  }
 }
