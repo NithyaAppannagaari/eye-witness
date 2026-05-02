@@ -5,7 +5,8 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 import fs from 'fs'
 import { crawlAndInsert } from './crawler'
 import { syncRegisteredPhotos } from './registry'
-import { processPending, processMatched, processVerified } from './pipeline'
+import { processPending, processMatched, processVerified, reconcilePaying } from './pipeline'
+import { syncLedger } from './ledger'
 import { startApiServer } from './api'
 import { logger } from './logger'
 
@@ -26,6 +27,14 @@ async function runLoop(): Promise<void> {
 
   startApiServer()
 
+  // Reconcile any rows left in 'paying' from a prior crashed run before
+  // entering the main loop. Otherwise they'd sit in limbo forever.
+  try {
+    await reconcilePaying()
+  } catch (err) {
+    logger.warn({ err }, '[index] Boot reconcile failed — continuing; loop will retry')
+  }
+
   const tick = async () => {
     logger.info(`[index] Tick at ${new Date().toISOString()}`)
 
@@ -43,6 +52,14 @@ async function runLoop(): Promise<void> {
     await processPending()
     await processMatched()
     await processVerified()
+
+    // Index any new PaymentDrawn events into the ledger. Runs after processVerified
+    // so the txs we just submitted in this tick are picked up on the same pass.
+    try {
+      await syncLedger()
+    } catch (err) {
+      logger.warn({ err }, '[index] Ledger sync failed — will retry next tick')
+    }
 
     logger.info('[index] Tick complete')
   }

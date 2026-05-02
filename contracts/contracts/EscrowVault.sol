@@ -25,6 +25,10 @@ contract EscrowVault is AccessControl, ReentrancyGuard {
     mapping(address => uint256) public publisherBalances;
     mapping(string => address) public domainOwners;
 
+    // Idempotency guard: once a (photoId, url) pair has been charged, it cannot be charged again.
+    // Prevents double-deduction if the agent retries a tx whose receipt it already mined.
+    mapping(bytes32 => mapping(string => bool)) public chargedFor;
+
     event Deposited(address indexed publisher, uint256 amount);
     event Withdrawn(address indexed publisher, uint256 amount);
     event PaymentDrawn(bytes32 indexed photoId, address indexed publisher, string url, uint256 amount);
@@ -69,7 +73,11 @@ contract EscrowVault is AccessControl, ReentrancyGuard {
         address photographer,
         string calldata useType
     ) external onlyRole(AGENT_ROLE) nonReentrant {
+        require(!chargedFor[photoId][url], "Already charged for this photo and URL");
         require(publisherBalances[publisher] >= amount, "Insufficient publisher balance");
+
+        // Effects before interactions: mark charged + debit balance, then call external contract.
+        chargedFor[photoId][url] = true;
         publisherBalances[publisher] -= amount;
 
         usdc.approve(address(licenseEngine), amount);

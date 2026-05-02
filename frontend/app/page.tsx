@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { useConnection } from "wagmi";
+import { formatUnits } from "viem";
+import { ConnectButton } from "@/components/ConnectButton";
+import { useWalletRole } from "@/hooks/useWalletRole";
 
 const TICKER = [
   "Perceptual hash matching",
@@ -35,13 +39,11 @@ export default function Home() {
           <a href="#how" className="text-sm text-[#a89f96] hover:text-[#f5f0eb] transition-colors">How it works</a>
           <a href="#roles" className="text-sm text-[#a89f96] hover:text-[#f5f0eb] transition-colors">Pricing</a>
         </div>
-        <Link
-          href="/register"
-          className="rounded-lg bg-orange-500 px-5 py-2.5 text-sm font-semibold text-white hover:bg-orange-600 transition-all hover:scale-[1.03] active:scale-[0.98]"
-        >
-          Register a Photo
-        </Link>
+        <ConnectButton />
       </nav>
+
+      {/* Role-aware banner — shown only when a wallet is connected */}
+      <RoleBanner />
 
       {/* Hero */}
       <section className="relative min-h-[88vh] flex flex-col items-center justify-center text-center px-6 py-24 overflow-hidden">
@@ -388,5 +390,83 @@ export default function Home() {
         <div className="text-xs text-[#6b6259]">Verified Photography. Automatic Enforcement. On-Chain Payments.</div>
       </footer>
     </main>
+  );
+}
+
+function RoleBanner() {
+  const { isConnected, address } = useConnection();
+  const { role, photoCount, escrowBalance, loading } = useWalletRole();
+
+  if (!isConnected || !address) return null;
+  if (loading && role === "none") {
+    return (
+      <div className="border-b border-white/[0.07] bg-[#0c0a08] px-8 py-3 text-xs text-[#6b6259]">
+        Detecting role for {address.slice(0, 6)}…{address.slice(-4)}…
+      </div>
+    );
+  }
+
+  const short = `${address.slice(0, 6)}…${address.slice(-4)}`;
+  const balanceDisplay = `$${formatUnits(escrowBalance, 6)}`;
+
+  const cards: Array<{ href: string; title: string; sub: string; primary?: boolean }> = [];
+  if (role === "photographer" || role === "both") {
+    cards.push({
+      href: "/dashboard/photographer",
+      title: "Photographer Dashboard",
+      sub: `${photoCount} photo${photoCount === 1 ? "" : "s"} registered`,
+      primary: role === "photographer",
+    });
+  }
+  if (role === "publisher" || role === "both") {
+    cards.push({
+      href: "/publisher",
+      title: "Publisher Dashboard",
+      sub: `${balanceDisplay} in escrow`,
+      primary: role === "publisher",
+    });
+  }
+  if (role === "none") {
+    cards.push(
+      { href: "/register", title: "I'm a photographer", sub: "Register your first photo" },
+      { href: "/publisher", title: "I'm a publisher", sub: "Deposit USDC to license photos" },
+    );
+  }
+
+  const heading =
+    role === "both" ? "Welcome back. You can act as either role."
+    : role === "photographer" ? "Welcome back, photographer."
+    : role === "publisher" ? "Welcome back, publisher."
+    : "What would you like to do?";
+
+  return (
+    <div className="border-b border-white/[0.07] bg-[#0c0a08]">
+      <div className="max-w-5xl mx-auto px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <p className="text-xs text-[#6b6259] uppercase tracking-widest mb-1">
+            Connected as <span className="font-mono text-[#a89f96]">{short}</span>
+          </p>
+          <p className="text-sm text-[#f5f0eb]">{heading}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {cards.map((c) => (
+            <Link
+              key={c.href}
+              href={c.href}
+              className={`rounded-lg px-4 py-2.5 text-sm font-semibold transition-all hover:-translate-y-0.5 ${
+                c.primary
+                  ? "bg-orange-500 text-white hover:bg-orange-600"
+                  : "border border-white/[0.14] text-[#f5f0eb] hover:bg-white/[0.05]"
+              }`}
+            >
+              <span className="block">{c.title}</span>
+              <span className={`block text-[11px] mt-0.5 ${c.primary ? "text-orange-100/80" : "text-[#6b6259]"}`}>
+                {c.sub}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

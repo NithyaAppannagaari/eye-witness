@@ -6,6 +6,7 @@ import { ConnectButton } from "@/components/ConnectButton";
 import { useConnection, useReadContract, useWriteContract, useWaitForTransactionReceipt, useWatchContractEvent } from "wagmi";
 import { formatUnits } from "viem";
 import { useDepositUSDC } from "@/hooks/useDepositUSDC";
+import { agentApi, type LedgerEntry } from "@/lib/agent-api";
 import EscrowVaultABI from "@/abi/EscrowVault.json";
 import LicenseEngineABI from "@/abi/LicenseEngine.json";
 import MockUSDCABI from "@/abi/MockUSDC.json";
@@ -29,6 +30,8 @@ export default function PublisherPage() {
   const [depositAmount, setDepositAmount] = useState("");
   const [domain, setDomain] = useState("");
   const [licenses, setLicenses] = useState<LicenseEvent[]>([]);
+  const [ledger, setLedger] = useState<LedgerEntry[]>([]);
+  const [ledgerError, setLedgerError] = useState<string | null>(null);
 
   const { deposit, step: depositStep, isPending: isDepositing, error: depositError, reset: resetDeposit } = useDepositUSDC();
 
@@ -82,6 +85,24 @@ export default function PublisherPage() {
   });
 
   useEffect(() => { resetDeposit(); }, [address]);
+
+  // Poll the agent's ledger every 10s. The ledger is the source of truth for
+  // "where did my escrow go" — every row is a confirmed on-chain PaymentDrawn event.
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const rows = await agentApi.ledgerByPublisher(address);
+        if (!cancelled) { setLedger(rows); setLedgerError(null); }
+      } catch (err) {
+        if (!cancelled) setLedgerError(err instanceof Error ? err.message : "Failed to load ledger");
+      }
+    };
+    load();
+    const interval = setInterval(load, 10_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [address]);
 
   if (depositStep === "done") {
     refetchBalance();
@@ -174,6 +195,9 @@ export default function PublisherPage() {
               <h2 className="font-semibold text-[#f5f0eb] mb-1">Claim Your Domain</h2>
               <p className="text-sm text-[#6b6259] mb-4">
                 Register your domain on-chain so the detection agent can identify you as the publisher for automatic licensing.
+                <span className="block mt-2 text-amber-400/80">
+                  Important: until a domain is claimed, detections on that domain skip auto-pay and go straight to DMCA — even if you have escrow. Use the bare hostname (e.g. <span className="font-mono">example.com</span>, not <span className="font-mono">https://example.com/path</span>).
+                </span>
               </p>
               <div className="flex gap-3">
                 <input
@@ -202,6 +226,13 @@ export default function PublisherPage() {
                 <p className="mt-2 text-sm text-emerald-400">Domain claimed successfully.</p>
               )}
             </section>
+
+            {/* Escrow ledger — every on-chain deduction, with reconciliation */}
+            <LedgerPanel
+              ledger={ledger}
+              error={ledgerError}
+              currentBalance={balance}
+            />
 
             {/* License history */}
             <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] overflow-hidden">
@@ -266,5 +297,102 @@ function StatCard({ label, value, highlight }: { label: string; value: string; h
       <p className="text-[11px] text-[#6b6259] uppercase tracking-widest">{label}</p>
       <p className={`mt-1.5 text-2xl font-bold ${highlight ? "text-orange-400" : "text-[#f5f0eb]"}`}>{value}</p>
     </div>
+  );
+}
+
+function LedgerPanel({
+  ledger,
+  error,
+  currentBalance,
+}: {
+  ledger: LedgerEntry[];
+  error: string | null;
+  currentBalance: bigint;
+}) {
+  const totalDeducted = ledger.reduce((acc, e) => acc + BigInt(e.amount), 0n);
+
+  return (
+    <section className="rounded-xl border border-white/[0.08] bg-[#0d0b08] overflow-hidden">
+      <div className="px-6 py-4 border-b border-white/[0.07] flex items-baseline justify-between">
+        <div>
+          <h2 className="font-semibold text-[#f5f0eb]">Escrow Ledger</h2>
+          <p className="text-xs text-[#6b6259] mt-0.5">
+            Every on-chain deduction from your escrow. Indexed from PaymentDrawn events.
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="text-[11px] text-[#6b6259] uppercase tracking-widest">Total Deducted</p>
+          <p className="text-lg font-bold text-[#f5f0eb] tabular-nums">${formatUnits(totalDeducted, 6)}</p>
+        </div>
+      </div>
+
+      {error && (
+        <div className="px-6 py-3 border-b border-white/[0.07] bg-red-500/[0.05] text-xs text-red-400">
+          Could not load ledger: {error}. Is the agent running on localhost:3001?
+        </div>
+      )}
+
+      {ledger.length === 0 ? (
+        <div className="px-6 py-10 text-center text-sm text-[#6b6259]">
+          {error ? "—" : "No deductions yet. Each detection of a licensed photo on a page you publish creates one row."}
+        </div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead className="bg-[#0a0806] border-b border-white/[0.07]">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">When</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Photo</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Page</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Use</th>
+              <th className="px-4 py-3 text-right text-xs font-medium text-[#6b6259] uppercase tracking-wider">Amount</th>
+              <th className="px-4 py-3 text-left text-xs font-medium text-[#6b6259] uppercase tracking-wider">Tx</th>
+            </tr>
+          </thead>
+          <tbody>
+            {ledger.map((e) => (
+              <tr key={`${e.txHash}-${e.logIndex}`} className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.02] transition-colors">
+                <td className="px-4 py-3 text-xs text-[#6b6259] whitespace-nowrap">
+                  {e.blockTimestamp ? new Date(e.blockTimestamp * 1000).toLocaleString() : "—"}
+                </td>
+                <td className="px-4 py-3 font-mono text-xs text-[#a89f96]">
+                  {e.photoId.slice(0, 10)}…
+                </td>
+                <td className="px-4 py-3 text-xs text-[#a89f96] max-w-xs truncate">
+                  <a href={e.pageUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#f5f0eb]">
+                    {e.pageUrl}
+                  </a>
+                </td>
+                <td className="px-4 py-3">
+                  <span className="rounded-full bg-orange-500/[0.1] border border-orange-500/20 px-2 py-0.5 text-xs font-medium text-orange-400 capitalize">
+                    {e.useType ?? "—"}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-right font-mono text-sm text-[#f5f0eb] tabular-nums">
+                  −${formatUnits(BigInt(e.amount), 6)}
+                </td>
+                <td className="px-4 py-3">
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${e.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-orange-400/60 hover:text-orange-400 transition-colors"
+                  >
+                    View ↗
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {/* Reconciliation footer: current escrow + total deducted = ?
+          Not strictly an equality (deposits + withdrawals also move balance) but
+          shows the ledger sum next to the live balance for sanity-checking during demos. */}
+      <div className="px-6 py-3 border-t border-white/[0.07] bg-[#0a0806] flex items-center justify-between text-xs text-[#6b6259]">
+        <span>Live escrow balance:</span>
+        <span className="font-mono tabular-nums text-[#a89f96]">${formatUnits(currentBalance, 6)}</span>
+      </div>
+    </section>
   );
 }

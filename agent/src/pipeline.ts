@@ -12,11 +12,44 @@ import {
   getPendingDetections,
   getMatchedDetections,
   getVerifiedDetections,
+  getPayingDetections,
   updateDetection,
+  upsertRegisteredPhoto,
 } from './db'
-import { getPublisherForDomain, getPublisherBalance, executePayment } from './payment'
+import { getPublisherForDomain, getPublisherBalance, executePayment, isAlreadyChargedOnChain } from './payment'
 import { identifyHost, getSiteOwnerEmails, generateNotice, sendNotice } from './dmca'
 import { logger } from './logger'
+
+// Boot-time reconciliation: any rows left in 'paying' from a prior crashed run
+// must be resolved before we re-enter the loop. We probe the on-chain guard:
+//   - charged → mark 'paid' (we lost the txHash, but the funds did move)
+//   - not charged → roll back to 'verified' so the next tick retries cleanly
+// If the chain probe fails (RPC down), we leave the row alone and try again next boot.
+export async function reconcilePaying(): Promise<void> {
+  const rows = getPayingDetections()
+  if (rows.length === 0) return
+  logger.info(`[pipeline] Reconciling ${rows.length} stuck 'paying' detections from prior run`)
+
+  for (const row of rows) {
+    if (!row.matchedPhotoHash) {
+      logger.warn(`[pipeline] Detection ${row.id} stuck in 'paying' with no matchedPhotoHash — rolling back`)
+      updateDetection(row.id, { status: 'verified' })
+      continue
+    }
+    try {
+      const charged = await isAlreadyChargedOnChain(row.matchedPhotoHash, row.pageUrl)
+      if (charged) {
+        logger.info(`[pipeline] Detection ${row.id}: charged on-chain, settling as paid`)
+        updateDetection(row.id, { status: 'paid' })
+      } else {
+        logger.info(`[pipeline] Detection ${row.id}: not charged on-chain, rolling back to verified`)
+        updateDetection(row.id, { status: 'verified' })
+      }
+    } catch (err) {
+      logger.warn({ err }, `[pipeline] Reconcile probe failed for detection ${row.id} — leaving as 'paying' for next boot`)
+    }
+  }
+}
 
 export async function processPending(): Promise<void> {
   const rows = getPendingDetections()
@@ -35,6 +68,17 @@ export async function processPending(): Promise<void> {
         if (photo) {
           matched = true
           const pHash = await computePHash(buffer)
+          // Upsert into registered_photos *now* so the ledger indexer (which
+          // runs later in the same tick) can resolve the photographer. Without
+          // this, ledger rows can land with photographer=null when syncRegisteredPhotos
+          // is rate-limit-lagging behind — and the photographer dashboard then
+          // shows $0 earned even though the on-chain payment succeeded.
+          upsertRegisteredPhoto({
+            photoHash: imageHash,
+            owner: photo.owner,
+            timestamp: photo.timestamp,
+            pHash,
+          })
           seedRegisteredPHash(imageHash, pHash)
 
           const alreadyLicensed = await checkLicense(imageHash, row.pageUrl)
@@ -115,21 +159,49 @@ export async function processVerified(): Promise<void> {
     updateDetection(row.id, { useType, licensePrice })
 
     // Attempt automatic payment if publisher has escrow
-    if (licensePrice) {
+    if (!licensePrice) {
+      logger.info(`[pipeline] Detection ${row.id}: no license price for use="${useType}" on photo ${row.matchedPhotoHash} — falling through to DMCA`)
+    } else {
+      let publisherAddress: string | null = null
       try {
         const domain = new URL(row.pageUrl).hostname
-        const publisherAddress = await getPublisherForDomain(domain)
-        if (publisherAddress) {
+        publisherAddress = await getPublisherForDomain(domain)
+        if (!publisherAddress) {
+          logger.info(`[pipeline] Detection ${row.id}: domain "${domain}" not claimed by any publisher — falling through to DMCA. Have a publisher run claimDomain("${domain}") to enable auto-pay.`)
+        } else {
           const balance = await getPublisherBalance(publisherAddress)
-          if (balance >= licensePrice) {
+          if (balance < licensePrice) {
+            logger.info(`[pipeline] Detection ${row.id}: publisher ${publisherAddress} balance ${balance} < price ${licensePrice} — falling through to DMCA. Top up escrow to enable auto-pay.`)
+          } else {
+            // Record intent BEFORE the tx. If the agent crashes between here and
+            // the `paid` update, the boot-time reconciler will check the on-chain
+            // chargedFor guard and resolve to 'paid' (if the tx mined) or back to
+            // 'verified' (if it didn't). The contract guard prevents double-charge
+            // even if the reconciler is wrong.
+            updateDetection(row.id, { status: 'paying', publisherAddress })
             const txHash = await executePayment(publisherAddress, row.matchedPhotoHash, licensePrice, row.pageUrl, row.ownerWallet, useType)
-            logger.info(`[pipeline] Paid — tx: ${txHash}`)
-            updateDetection(row.id, { status: 'paid', txHash, publisherAddress })
+            logger.info(`[pipeline] Detection ${row.id}: PAID ${licensePrice} from ${publisherAddress} for ${row.pageUrl} — tx: ${txHash}`)
+            updateDetection(row.id, { status: 'paid', txHash })
             continue
           }
         }
       } catch (err) {
-        logger.warn({ err }, `[pipeline] Payment failed for detection ${row.id}`)
+        logger.warn({ err, publisherAddress }, `[pipeline] Payment failed for detection ${row.id}`)
+        // Tx may have mined despite the local error (e.g. lost receipt). Probe the
+        // on-chain guard. If charged, settle as 'paid' without txHash (we lost it).
+        // If not charged or the probe also fails, roll back to 'verified' — the
+        // contract guard ensures a retry can't double-charge.
+        let settled = false
+        if (row.matchedPhotoHash) {
+          try {
+            if (await isAlreadyChargedOnChain(row.matchedPhotoHash, row.pageUrl)) {
+              logger.info(`[pipeline] Reconciled detection ${row.id}: charged on-chain, marking paid`)
+              updateDetection(row.id, { status: 'paid' })
+              settled = true
+            }
+          } catch { /* probe failed — leave for boot reconciler */ }
+        }
+        if (!settled) updateDetection(row.id, { status: 'verified' })
       }
     }
 

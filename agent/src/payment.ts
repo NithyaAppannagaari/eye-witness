@@ -50,6 +50,13 @@ export async function getPublisherBalance(publisherAddress: string): Promise<big
   return await escrowVault.getBalance(publisherAddress) as bigint
 }
 
+// Reads the on-chain idempotency guard. Used by the boot-time reconciler to decide
+// whether a 'paying' row was actually charged before the agent crashed.
+export async function isAlreadyChargedOnChain(photoId: string, pageUrl: string): Promise<boolean> {
+  const { escrowVault } = getContracts()
+  return await escrowVault.chargedFor(photoId, pageUrl) as boolean
+}
+
 export async function executePayment(
   publisherAddress: string,
   photoHash: string,

@@ -1,5 +1,5 @@
 {
-  "address": "0xAE5B819bB335CEB44bAd485A144dAA61eEd8E374",
+  "address": "0x392e97b7355D7Fde307554480CC04e39Cb9a70DD",
   "abi": [
     {
       "inputs": [
@@ -193,63 +193,6 @@
         {
           "indexed": true,
           "internalType": "address",
-          "name": "agency",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "StakeDeposited",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "agency",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "StakeReplenished",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "agency",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "StakeWithdrawn",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
           "name": "publisher",
           "type": "address"
         },
@@ -292,17 +235,22 @@
     {
       "inputs": [
         {
-          "internalType": "address",
+          "internalType": "bytes32",
           "name": "",
-          "type": "address"
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "",
+          "type": "string"
         }
       ],
-      "name": "agencyStakes",
+      "name": "chargedFor",
       "outputs": [
         {
-          "internalType": "uint256",
+          "internalType": "bool",
           "name": "",
-          "type": "uint256"
+          "type": "bool"
         }
       ],
       "stateMutability": "view",
@@ -524,24 +472,6 @@
     {
       "inputs": [
         {
-          "internalType": "address",
-          "name": "agency",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "replenishStake",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
           "internalType": "bytes32",
           "name": "role",
           "type": "bytes32"
@@ -553,19 +483,6 @@
         }
       ],
       "name": "revokeRole",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "stakeAgency",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -611,19 +528,6 @@
         }
       ],
       "name": "withdraw",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        }
-      ],
-      "name": "withdrawStake",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

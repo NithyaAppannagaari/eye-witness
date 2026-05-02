@@ -1,16 +1,11 @@
 {
-  "address": "0xAc9F9eA0e7B3a5BEe9F115c67664089255C33214",
+  "address": "0x376137252BbD82267116821524d0C0359C2788EB",
   "abi": [
     {
       "inputs": [
         {
           "internalType": "uint96",
           "name": "_photographerCut",
-          "type": "uint96"
-        },
-        {
-          "internalType": "uint96",
-          "name": "_agentCut",
           "type": "uint96"
         },
         {
@@ -417,19 +412,6 @@
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "agentCut",
-      "outputs": [
-        {
-          "internalType": "uint96",
-          "name": "",
-          "type": "uint96"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "address",
@@ -577,11 +559,6 @@
         {
           "internalType": "address",
           "name": "photographer",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "agentWallet",
           "type": "address"
         },
         {
