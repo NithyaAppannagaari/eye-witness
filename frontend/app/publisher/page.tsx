@@ -54,6 +54,22 @@ export default function PublisherPage() {
   const { mutate: claimDomain, isPending: isClaimPending, data: claimTx } = useWriteContract();
   const { isSuccess: claimConfirmed } = useWaitForTransactionReceipt({ hash: claimTx });
 
+  // Live lookup: who currently owns the domain the user is typing? Lets the
+  // publisher see if they're about to overwrite someone else's claim, or if
+  // an existing claim points at the wrong wallet (their escrow won't be debited).
+  const trimmedDomain = domain.trim();
+  const { data: currentClaimer } = useReadContract({
+    address: VAULT_ADDRESS,
+    abi: EscrowVaultABI.abi,
+    functionName: "domainOwners",
+    args: [trimmedDomain],
+    query: { enabled: !!VAULT_ADDRESS && trimmedDomain.length > 0, refetchInterval: 10_000 },
+  });
+  const claimerAddr = (currentClaimer as string | undefined) ?? "";
+  const ZERO = "0x0000000000000000000000000000000000000000";
+  const isClaimedByConnectedWallet =
+    !!address && claimerAddr.length > 0 && claimerAddr.toLowerCase() === address.toLowerCase();
+
   const { mutate: mintUsdc, isPending: isMinting, data: mintTx } = useWriteContract();
   const { isSuccess: mintConfirmed } = useWaitForTransactionReceipt({ hash: mintTx });
 
@@ -222,6 +238,30 @@ export default function PublisherPage() {
                   {isClaimPending ? "Claiming…" : "Claim Domain"}
                 </button>
               </div>
+
+              {/* Current on-chain claim status — surfaces the case where the
+                  domain is already claimed by a different wallet, which would
+                  silently route DMCA instead of payment. */}
+              {trimmedDomain.length > 0 && claimerAddr !== "" && (
+                <div className="mt-3 text-xs">
+                  {claimerAddr === ZERO ? (
+                    <p className="text-[#6b6259]">
+                      <span className="font-mono">{trimmedDomain}</span> is unclaimed. Claim it to enable auto-pay from this wallet&apos;s escrow.
+                    </p>
+                  ) : isClaimedByConnectedWallet ? (
+                    <p className="text-emerald-400">
+                      ✓ <span className="font-mono">{trimmedDomain}</span> is already claimed by your connected wallet — auto-pay will work.
+                    </p>
+                  ) : (
+                    <p className="text-amber-400">
+                      ⚠ <span className="font-mono">{trimmedDomain}</span> is currently claimed by{" "}
+                      <span className="font-mono">{claimerAddr.slice(0, 6)}…{claimerAddr.slice(-4)}</span>.
+                      The agent will debit <em>that</em> wallet&apos;s escrow, not yours. Click Claim Domain to overwrite the claim with your wallet.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {claimConfirmed && (
                 <p className="mt-2 text-sm text-emerald-400">Domain claimed successfully.</p>
               )}
